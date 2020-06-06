@@ -17,7 +17,7 @@ var flags struct {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "pm",
+	Use:   "tq",
 	Short: "Task Queue",
 }
 

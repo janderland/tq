@@ -1,4 +1,4 @@
-module github.com/janderland/pm
+module github.com/janderland/tq
 
 go 1.14
 
