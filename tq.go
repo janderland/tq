@@ -33,7 +33,8 @@ var topCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to read queue file")
 		}
 		if len(tasks) == 0 {
-			return errors.New("no tasks in queue")
+			fmt.Println("no tasks in queue")
+			return nil
 		}
 		display(tasks[0])
 		return nil
@@ -102,6 +103,10 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
 		}
+		if len(tasks) == 0 {
+			fmt.Println("no tasks in queue")
+			return nil
+		}
 		lastIndex := len(tasks) - 1
 		for _, task := range tasks[:lastIndex] {
 			display(task)
@@ -144,13 +149,17 @@ var openCmd = &cobra.Command{
 
 var doneCmd = &cobra.Command{
 	Use:   "done",
-	Short: "Remove a task from the queue.",
-	Long: trim(`
-		Remove a task from the queue. Optionally, this command
-		will move the task into a "done" list for later
-		reference.`),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New("unimplemented")
+	Short: "Remove the current task from the queue.",
+	RunE: func(_ *cobra.Command, _ []string) error {
+		tasks, err := read(flags.queue)
+		if err != nil {
+			return errors.Wrap(err, "failed to read queue file")
+		}
+		if len(tasks) == 0 {
+			fmt.Println("no tasks in queue")
+			return nil
+		}
+		return write(flags.queue, tasks[1:])
 	},
 }
 
@@ -164,7 +173,6 @@ func init() {
 	newCmd.Flags().StringVarP(&flags.title, "title", "t", "", "new task's title")
 	newCmd.Flags().StringVarP(&flags.story, "story", "s", "", "new task's story")
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
-
 	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
 
 	rootCmd.AddCommand(topCmd)
@@ -183,7 +191,6 @@ func main() {
 const (
 	todo = "todo"
 	open = "open"
-	done = "done"
 )
 
 type Task struct {
