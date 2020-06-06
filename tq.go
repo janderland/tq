@@ -72,20 +72,43 @@ var newCmd = &cobra.Command{
 		var newTask *Task
 		index := 0
 
-		if flagCount == 0 {
-			return errors.New("unimplemented")
-		} else {
+		if flagCount != 0 {
+			if flags.index > len(tasks) || flags.index < 0 {
+				return errors.Errorf(
+					"flag 'index' must be in (0, %v)", len(tasks))
+			}
 			newTask = &Task{
 				Title: flags.title,
 				Story: flags.story,
 				State: todo,
 			}
+			index = flags.index
+		} else {
+			return errors.New("interactive mode isn't implemented")
 		}
 
 		tasks = append(tasks, nil)
 		copy(tasks[index+1:], tasks[index:])
 		tasks[index] = newTask
 		return write(flags.queue, tasks)
+	},
+}
+
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all tasks in the queue.",
+	RunE: func(_ *cobra.Command, _ []string) error {
+		tasks, err := read(flags.queue)
+		if err != nil {
+			return errors.Wrap(err, "failed to read queue file")
+		}
+		lastIndex := len(tasks) - 1
+		for _, task := range tasks[:lastIndex] {
+			display(task)
+			fmt.Println()
+		}
+		display(tasks[lastIndex])
+		return nil
 	},
 }
 
@@ -98,7 +121,24 @@ var openCmd = &cobra.Command{
 		it's state to "open", and move it to the front of the
 		queue.`),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return errors.New("unimplemented")
+		tasks, err := read(flags.queue)
+		if err != nil {
+			return errors.Wrap(err, "failed to read queue file")
+		}
+
+		index := 0
+
+		if flags.index != -1 {
+			index = flags.index
+		} else {
+			return errors.New("interactive mode isn't implemented")
+		}
+
+		openTask := tasks[index]
+		openTask.State = open
+		copy(tasks[1:], tasks[:index])
+		tasks[0] = openTask
+		return write(flags.queue, tasks)
 	},
 }
 
@@ -125,8 +165,11 @@ func init() {
 	newCmd.Flags().StringVarP(&flags.story, "story", "s", "", "new task's story")
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
 
+	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
+
 	rootCmd.AddCommand(topCmd)
 	rootCmd.AddCommand(newCmd)
+	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(openCmd)
 	rootCmd.AddCommand(doneCmd)
 }
@@ -173,7 +216,8 @@ func write(path string, tasks []*Task) error {
 }
 
 func display(task *Task) {
-	fmt.Println(task)
+	fmt.Printf("# %s (%s)\n", task.Title, task.State)
+	fmt.Println(task.Story)
 }
 
 func trim(str string) string {
