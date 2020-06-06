@@ -202,7 +202,10 @@ type Task struct {
 func read(path string) ([]*Task, error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to open file")
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
 	}
 	var tasks []*Task
 	if err := json.NewDecoder(file).Decode(&tasks); err != nil {
