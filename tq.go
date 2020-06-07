@@ -39,7 +39,7 @@ var topCmd = &cobra.Command{
 			fmt.Println("no tasks in queue")
 			return nil
 		}
-		display(tasks[0], 0)
+		display(tasks, 0)
 		return nil
 	},
 }
@@ -103,7 +103,7 @@ var newCmd = &cobra.Command{
 				fmt.Println()
 				fmt.Println("+ Should the new task be opened before this one?")
 				fmt.Println()
-				display(tasks[index-1], index-1)
+				display(tasks, index-1)
 				fmt.Println()
 				yes, err := queryYesNo()
 				if err != nil {
@@ -133,11 +133,11 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 		lastIndex := len(tasks) - 1
-		for index, task := range tasks[:lastIndex] {
-			display(task, index)
+		for index := range tasks[:lastIndex] {
+			display(tasks, index)
 			fmt.Println()
 		}
-		display(tasks[lastIndex], lastIndex)
+		display(tasks, lastIndex)
 		return nil
 	},
 }
@@ -155,12 +155,30 @@ var openCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
 		}
-		index := 0
+
+		var index int
+
 		if flags.index != -1 {
 			index = flags.index
 		} else {
-			return errors.New("interactive mode isn't implemented")
+			for index = 0; index < len(tasks); index++ {
+				if index != 0 {
+					fmt.Println()
+				}
+				fmt.Println("+ Would you like to open this task?")
+				fmt.Println()
+				display(tasks, index)
+				fmt.Println()
+				yes, err := queryYesNo()
+				if err != nil {
+					return err
+				}
+				if yes {
+					break
+				}
+			}
 		}
+
 		return write(flags.queue, open(tasks, index))
 	},
 }
@@ -270,7 +288,8 @@ func normalize(task *Task) *Task {
 	return task
 }
 
-func display(task *Task, index int) {
+func display(tasks []*Task, index int) {
+	task := tasks[index]
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
 		title += " "
