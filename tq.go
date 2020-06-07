@@ -16,6 +16,7 @@ var flags struct {
 	title string
 	story string
 	index int
+	width int
 }
 
 var rootCmd = &cobra.Command{
@@ -29,7 +30,7 @@ var topCmd = &cobra.Command{
 	Long: trim(`
 		View the current task. This is the task at the front
 		of the queue.`),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		tasks, err := read(flags.queue)
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
@@ -52,7 +53,7 @@ var newCmd = &cobra.Command{
 		whether each task has higher priority than the new
 		task. When a higher priority task is found, insert
 		the new task behind this task.`),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		tasks, err := read(flags.queue)
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
@@ -72,7 +73,7 @@ var newCmd = &cobra.Command{
 			return errors.New("flags 'title', 'story', & 'index' must be all set or none")
 		}
 
-		newTask := Task{State: todo}
+		newTask := Task{State: todoState}
 		index := 0
 
 		if flagCount != 0 {
@@ -85,36 +86,28 @@ var newCmd = &cobra.Command{
 			index = flags.index
 		} else {
 			reader := bufio.NewReader(os.Stdin)
-			fmt.Println("+ Input the title. Newline ends input.")
+
+			fmt.Print("+ Input the title.\n\n")
 			newTask.Title, err = reader.ReadString('\n')
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
 			newTask.Title = strings.ToUpper(trim(newTask.Title))
 
-			scanner := bufio.NewScanner(os.Stdin)
-			scanner.Split(bufio.ScanWords)
-			var storyWords []string
-			fmt.Println("\n+ Input the story. The word 'END' ends input.")
-			for scanner.Scan() {
-				if word := scanner.Text(); word == "END" {
-					break
-				} else {
-					storyWords = append(storyWords, word)
-				}
+			fmt.Print("\n+ Input the story.\n\n")
+			newTask.Story, err = reader.ReadString('\n')
+			if err != nil {
+				return errors.Wrap(err, "failed to read title")
 			}
-			if err := scanner.Err(); err != nil {
-				return errors.Wrap(err, "failed to read story")
-			}
-			newTask.Story = strings.Join(storyWords, " ")
+			newTask.Story = strings.ToUpper(trim(newTask.Story))
 
 			if len(tasks) > 0 {
 				fmt.Println("\n+ For each task shown, answer the following question:")
 				fmt.Println("  Should the new task be opened before this one?")
-
 				for index = len(tasks); index > 0; index-- {
 					fmt.Println()
 					display(tasks[index-1])
+					fmt.Println()
 					yes, err := queryYesNo()
 					if err != nil {
 						return err
@@ -126,10 +119,7 @@ var newCmd = &cobra.Command{
 			}
 		}
 
-		tasks = append(tasks, nil)
-		copy(tasks[index+1:], tasks[index:])
-		tasks[index] = &newTask
-		return write(flags.queue, tasks)
+		return write(flags.queue, insert(tasks, &newTask, index))
 	},
 }
 
@@ -156,32 +146,25 @@ var listCmd = &cobra.Command{
 }
 
 var openCmd = &cobra.Command{
-	Use:   "open",
+	Use:   "openState",
 	Short: "Change your current task.",
 	Long: trim(`
 		Change the current task. Iterate through the tasks in
 		the queue from front to back. Select a task, change
-		it's state to "open", and move it to the front of the
+		it's state to "openState", and move it to the front of the
 		queue.`),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		tasks, err := read(flags.queue)
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
 		}
-
 		index := 0
-
 		if flags.index != -1 {
 			index = flags.index
 		} else {
 			return errors.New("interactive mode isn't implemented")
 		}
-
-		openTask := tasks[index]
-		openTask.State = open
-		copy(tasks[1:], tasks[:index])
-		tasks[0] = openTask
-		return write(flags.queue, tasks)
+		return write(flags.queue, open(tasks, index))
 	},
 }
 
@@ -208,10 +191,13 @@ func init() {
 		panic(err)
 	}
 
+	rootCmd.PersistentFlags().IntVarP(
+		&flags.width, "width", "w", 60, "width of displayed tasks")
+
 	newCmd.Flags().StringVarP(&flags.title, "title", "t", "", "new task's title")
 	newCmd.Flags().StringVarP(&flags.story, "story", "s", "", "new task's story")
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
-	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
+	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to openState")
 
 	rootCmd.AddCommand(topCmd)
 	rootCmd.AddCommand(newCmd)
@@ -227,8 +213,8 @@ func main() {
 }
 
 const (
-	todo = "todo"
-	open = "open"
+	todoState = "todoState"
+	openState = "openState"
 )
 
 type Task struct {
@@ -263,14 +249,57 @@ func write(path string, tasks []*Task) error {
 	return nil
 }
 
+func insert(tasks []*Task, newTask *Task, index int) []*Task {
+	tasks = append(tasks, nil)
+	copy(tasks[index+1:], tasks[index:])
+	tasks[index] = newTask
+	return tasks
+}
+
+func open(tasks []*Task, index int) []*Task {
+	openTask := tasks[index]
+	openTask.State = openState
+	copy(tasks[1:], tasks[:index])
+	tasks[0] = openTask
+	return tasks
+}
+
 func display(task *Task) {
-	fmt.Printf("# %s (%s)\n", task.Title, task.State)
-	fmt.Println(task.Story)
+	title := "# "
+	count := len(title)
+	words := append(strings.Split(task.Title, " "), fmt.Sprintf("(%s)", task.State))
+	for _, word := range words {
+		title += word
+		count += len(word)
+		if count > flags.width {
+			title += "\n  "
+			count = 2
+		} else {
+			title += " "
+			count++
+		}
+	}
+
+	story := "  "
+	count = len(story)
+	for _, word := range strings.Split(task.Story, " ") {
+		story += word
+		count += len(word)
+		if count > flags.width {
+			story += "\n  "
+			count = 2
+		} else {
+			story += " "
+			count++
+		}
+	}
+
+	fmt.Println(title)
+	fmt.Println(story)
 }
 
 func trim(str string) string {
-	return regexp.MustCompile(`\s+`).
-		ReplaceAllString(strings.TrimSpace(str), " ")
+	return regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(str), " ")
 }
 
 func queryYesNo() (bool, error) {
