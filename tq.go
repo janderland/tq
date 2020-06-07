@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"os"
 	"regexp"
+	"strings"
 )
 
 var flags struct {
@@ -70,7 +72,7 @@ var newCmd = &cobra.Command{
 			return errors.New("flags 'title', 'story', & 'index' must be all set or none")
 		}
 
-		var newTask *Task
+		newTask := Task{State: todo}
 		index := 0
 
 		if flagCount != 0 {
@@ -78,19 +80,55 @@ var newCmd = &cobra.Command{
 				return errors.Errorf(
 					"flag 'index' must be in (0, %v)", len(tasks))
 			}
-			newTask = &Task{
-				Title: flags.title,
-				Story: flags.story,
-				State: todo,
-			}
+			newTask.Title = flags.title
+			newTask.Story = flags.story
 			index = flags.index
 		} else {
-			return errors.New("interactive mode isn't implemented")
+			fmt.Println("Input the title. Newline character ends input.")
+			reader := bufio.NewReader(os.Stdin)
+			newTask.Title, err = reader.ReadString('\n')
+			if err != nil {
+				return errors.Wrap(err, "failed to read title")
+			}
+			newTask.Title = strings.TrimSpace(newTask.Title)
+
+			fmt.Println("\nInput the story. The sentence 'End.' ends input.")
+			var storyWords []string
+			scanner := bufio.NewScanner(os.Stdin)
+			scanner.Split(bufio.ScanWords)
+			for scanner.Scan() {
+				if word := scanner.Text(); word == "End." {
+					break
+				} else {
+					storyWords = append(storyWords, word)
+				}
+			}
+			if err := scanner.Err(); err != nil {
+				return errors.Wrap(err, "failed to read story")
+			}
+			newTask.Story = strings.Join(storyWords, " ")
+
+			if len(tasks) > 0 {
+				fmt.Println("For each task, answer the following question:")
+				fmt.Println(" Should the new task be opened before this one?")
+
+				for index = len(tasks); index > 0; index-- {
+					fmt.Println()
+					display(tasks[index-1])
+					yes, err := queryYesNo()
+					if err != nil {
+						return err
+					}
+					if !yes {
+						break
+					}
+				}
+			}
 		}
 
 		tasks = append(tasks, nil)
 		copy(tasks[index+1:], tasks[index:])
-		tasks[index] = newTask
+		tasks[index] = &newTask
 		return write(flags.queue, tasks)
 	},
 }
@@ -232,4 +270,25 @@ func display(task *Task) {
 
 func trim(str string) string {
 	return regexp.MustCompile(`\s+`).ReplaceAllString(str, " ")
+}
+
+func queryYesNo() (bool, error) {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("(Yn) ")
+		resp, err := reader.ReadString('\n')
+		if err != nil {
+			return false, errors.Wrap(err, "failed to query user")
+		}
+		switch strings.TrimSpace(resp) {
+		case "y":
+			fallthrough
+		case "Y":
+			return true, nil
+		case "n":
+			fallthrough
+		case "N":
+			return false, nil
+		}
+	}
 }
