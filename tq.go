@@ -115,6 +115,7 @@ var newCmd = &cobra.Command{
 			}
 		}
 
+		fmt.Printf("\n+ Inserting new task at index %d.\n", index)
 		return write(flags.queue, insert(tasks, normalize(&newTask), index))
 	},
 }
