@@ -100,9 +100,7 @@ var newCmd = &cobra.Command{
 			}
 
 			for index = len(tasks); index > 0; index-- {
-				fmt.Println()
-				fmt.Println("+ Should the new task be opened before this one?")
-				fmt.Println()
+				fmt.Print("\n+ Should the new task be opened before this one?\n\n")
 				display(tasks, index-1)
 				fmt.Println()
 				yes, err := queryYesNo()
@@ -155,30 +153,13 @@ var openCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
 		}
-
 		var index int
-
 		if flags.index != -1 {
 			index = flags.index
 		} else {
-			for index = 0; index < len(tasks); index++ {
-				if index != 0 {
-					fmt.Println()
-				}
-				fmt.Println("+ Would you like to open this task?")
-				fmt.Println()
-				display(tasks, index)
-				fmt.Println()
-				yes, err := queryYesNo()
-				if err != nil {
-					return err
-				}
-				if yes {
-					break
-				}
-			}
+			index, err = queryOpen(tasks)
 		}
-
+		fmt.Println("\nOpening task.")
 		return write(flags.queue, open(tasks, index))
 	},
 }
@@ -195,7 +176,25 @@ var doneCmd = &cobra.Command{
 			fmt.Println("no tasks in queue")
 			return nil
 		}
-		return write(flags.queue, tasks[1:])
+		fmt.Print("+ Is this task complete?\n\n")
+		display(tasks, 0)
+		fmt.Println()
+		yes, err := queryYesNo()
+		if err != nil {
+			return err
+		}
+		if !yes {
+			fmt.Println("\n+ Keeping current task.")
+			return nil
+		}
+		tasks = tasks[1:]
+		fmt.Println()
+		index, err := queryOpen(tasks)
+		if err != nil {
+			return err
+		}
+		fmt.Println("\n+ Removing current task and opening another.")
+		return write(flags.queue, open(tasks, index))
 	},
 }
 
@@ -345,4 +344,24 @@ func queryYesNo() (bool, error) {
 			return false, nil
 		}
 	}
+}
+
+func queryOpen(tasks []*Task) (int, error) {
+	var index int
+	for index = 0; index < len(tasks); index++ {
+		if index != 0 {
+			fmt.Println()
+		}
+		fmt.Print("+ Would you like to open this task?\n\n")
+		display(tasks, index)
+		fmt.Println()
+		yes, err := queryYesNo()
+		if err != nil {
+			return 0, err
+		}
+		if yes {
+			break
+		}
+	}
+	return index, nil
 }
