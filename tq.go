@@ -104,7 +104,7 @@ var newCmd = &cobra.Command{
 				fmt.Println("  Should the new task be opened before this one?")
 				for index = len(tasks); index > 0; index-- {
 					fmt.Println()
-					display(tasks[index-1], index)
+					display(tasks[index-1], index-1)
 					fmt.Println()
 					yes, err := queryYesNo()
 					if err != nil {
@@ -272,7 +272,6 @@ func normalize(task *Task) *Task {
 }
 
 func display(task *Task, index int) {
-	index += 5
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
 		title += " "
