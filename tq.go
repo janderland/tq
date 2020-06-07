@@ -74,7 +74,7 @@ var newCmd = &cobra.Command{
 		}
 
 		newTask := Task{State: todoState}
-		index := 0
+		var index int
 
 		if flagCount != 0 {
 			if flags.index > len(tasks) || flags.index < 0 {
@@ -99,20 +99,18 @@ var newCmd = &cobra.Command{
 				return errors.Wrap(err, "failed to read title")
 			}
 
-			if len(tasks) > 0 {
-				fmt.Println("\n+ For each task shown, answer the following question:")
-				fmt.Println("  Should the new task be opened before this one?")
-				for index = len(tasks); index > 0; index-- {
-					fmt.Println()
-					display(tasks[index-1], index-1)
-					fmt.Println()
-					yes, err := queryYesNo()
-					if err != nil {
-						return err
-					}
-					if !yes {
-						break
-					}
+			for index = len(tasks); index > 0; index-- {
+				fmt.Println()
+				fmt.Println("+ Should the new task be opened before this one?")
+				fmt.Println()
+				display(tasks[index-1], index-1)
+				fmt.Println()
+				yes, err := queryYesNo()
+				if err != nil {
+					return err
+				}
+				if !yes {
+					break
 				}
 			}
 		}
