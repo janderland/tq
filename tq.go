@@ -84,20 +84,20 @@ var newCmd = &cobra.Command{
 			newTask.Story = flags.story
 			index = flags.index
 		} else {
-			fmt.Println("Input the title. Newline character ends input.")
 			reader := bufio.NewReader(os.Stdin)
+			fmt.Println("+ Input the title. Newline ends input.")
 			newTask.Title, err = reader.ReadString('\n')
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
-			newTask.Title = strings.TrimSpace(newTask.Title)
+			newTask.Title = strings.ToUpper(trim(newTask.Title))
 
-			fmt.Println("\nInput the story. The sentence 'End.' ends input.")
-			var storyWords []string
 			scanner := bufio.NewScanner(os.Stdin)
 			scanner.Split(bufio.ScanWords)
+			var storyWords []string
+			fmt.Println("\n+ Input the story. The word 'END' ends input.")
 			for scanner.Scan() {
-				if word := scanner.Text(); word == "End." {
+				if word := scanner.Text(); word == "END" {
 					break
 				} else {
 					storyWords = append(storyWords, word)
@@ -109,8 +109,8 @@ var newCmd = &cobra.Command{
 			newTask.Story = strings.Join(storyWords, " ")
 
 			if len(tasks) > 0 {
-				fmt.Println("For each task, answer the following question:")
-				fmt.Println(" Should the new task be opened before this one?")
+				fmt.Println("\n+ For each task shown, answer the following question:")
+				fmt.Println("  Should the new task be opened before this one?")
 
 				for index = len(tasks); index > 0; index-- {
 					fmt.Println()
@@ -269,25 +269,22 @@ func display(task *Task) {
 }
 
 func trim(str string) string {
-	return regexp.MustCompile(`\s+`).ReplaceAllString(str, " ")
+	return regexp.MustCompile(`\s+`).
+		ReplaceAllString(strings.TrimSpace(str), " ")
 }
 
 func queryYesNo() (bool, error) {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("(Yn) ")
+		fmt.Print("Enter y|n: ")
 		resp, err := reader.ReadString('\n')
 		if err != nil {
 			return false, errors.Wrap(err, "failed to query user")
 		}
 		switch strings.TrimSpace(resp) {
 		case "y":
-			fallthrough
-		case "Y":
 			return true, nil
 		case "n":
-			fallthrough
-		case "N":
 			return false, nil
 		}
 	}
