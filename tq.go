@@ -87,33 +87,43 @@ var newCmd = &cobra.Command{
 		} else {
 			reader := bufio.NewReader(os.Stdin)
 
-			fmt.Print("+ Input the title.\n\n")
+			fmt.Println("+ Input the title.")
+			fmt.Println()
+
 			newTask.Title, err = reader.ReadString('\n')
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
+			fmt.Println()
 
-			fmt.Print("\n+ Input the story.\n\n")
+			fmt.Println("+ Input the story.")
+			fmt.Println()
+
 			newTask.Story, err = reader.ReadString('\n')
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
+			fmt.Println()
 
 			for index = len(tasks); index > 0; index-- {
-				fmt.Print("\n+ Should the new task be opened before this one?\n\n")
+				fmt.Println("+ Should the new task be opened before this one?")
+				fmt.Println()
+
 				display(tasks, index-1)
 				fmt.Println()
+
 				yes, err := queryYesNo()
 				if err != nil {
 					return err
 				}
+				fmt.Println()
 				if !yes {
 					break
 				}
 			}
 		}
 
-		fmt.Printf("\n+ Inserting new task at index %d.\n", index)
+		fmt.Printf("+ Inserting new task at index %d.\n", index)
 		return write(flags.queue, insert(tasks, normalize(&newTask), index))
 	},
 }
@@ -157,13 +167,29 @@ var openCmd = &cobra.Command{
 		if flags.index != -1 {
 			index = flags.index
 		} else {
-			index, err = queryOpen(tasks, 0)
+			for index = 0; index < len(tasks); index++ {
+				fmt.Println("+ Would you like to open this task?")
+				fmt.Println()
+
+				display(tasks, index)
+				fmt.Println()
+
+				yes, err := queryYesNo()
+				if err != nil {
+					return err
+				}
+				fmt.Println()
+
+				if yes {
+					break
+				}
+			}
 			if index == len(tasks) {
-				fmt.Println("\n+ End of queue. No task opened.")
+				fmt.Println("+ End of queue. No task opened.")
 				return nil
 			}
 		}
-		fmt.Println("\n+ Opening task.")
+		fmt.Println("+ Opening task.")
 		return write(flags.queue, open(tasks, index))
 	},
 }
@@ -176,40 +202,29 @@ var doneCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
 		}
-
 		if len(tasks) == 0 {
 			fmt.Println("+ No tasks in queue.")
 			return nil
 		}
-		fmt.Print("+ Is this task done?\n\n")
+
+		fmt.Println("+ Is this task done?")
+		fmt.Println()
+
 		display(tasks, 0)
 		fmt.Println()
+
 		yes, err := queryYesNo()
 		if err != nil {
 			return err
 		}
+		fmt.Println()
+
 		if !yes {
-			fmt.Println("\n+ Keeping current task.")
+			fmt.Println("+ Keeping current task.")
 			return nil
 		}
-
-		if len(tasks) == 1 {
-			fmt.Println("\n+ Removing current task.")
-			tasks = nil
-		} else {
-			fmt.Println()
-			index, err := queryOpen(tasks, 1)
-			if err != nil {
-				return err
-			}
-			if index == len(tasks) {
-				fmt.Println("\n+ End of queue. No tasks removed or opened.")
-				return nil
-			}
-			fmt.Println("\n+ Removing current task and opening another.")
-			tasks = open(tasks[1:], index-1)
-		}
-		return write(flags.queue, tasks)
+		fmt.Println("+ Removing current task.")
+		return write(flags.queue, tasks[1:])
 	},
 }
 
@@ -359,24 +374,4 @@ func queryYesNo() (bool, error) {
 			return false, nil
 		}
 	}
-}
-
-func queryOpen(tasks []*Task, start int) (int, error) {
-	var index int
-	for index = start; index < len(tasks); index++ {
-		if index != start {
-			fmt.Println()
-		}
-		fmt.Print("+ Would you like to open this task?\n\n")
-		display(tasks, index)
-		fmt.Println()
-		yes, err := queryYesNo()
-		if err != nil {
-			return 0, err
-		}
-		if yes {
-			break
-		}
-	}
-	return index, nil
 }
