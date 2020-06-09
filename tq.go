@@ -19,6 +19,8 @@ var flags struct {
 	width int
 }
 
+var ux = UX{}
+
 var rootCmd = &cobra.Command{
 	Use:   "tq",
 	Short: "Task Queue",
@@ -36,10 +38,10 @@ var topCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to read queue file")
 		}
 		if len(tasks) == 0 {
-			fmt.Println("no tasks in queue")
+			ux.print("No tasks in queue.")
 			return nil
 		}
-		display(tasks, 0)
+		ux.display(tasks, 0)
 		return nil
 	},
 }
@@ -85,45 +87,32 @@ var newCmd = &cobra.Command{
 			newTask.Story = flags.story
 			index = flags.index
 		} else {
-			reader := bufio.NewReader(os.Stdin)
-
-			fmt.Println("+ Input the title.")
-			fmt.Println()
-
-			newTask.Title, err = reader.ReadString('\n')
+			ux.print("Input the title.")
+			newTask.Title, err = ux.queryLine()
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
-			fmt.Println()
 
-			fmt.Println("+ Input the story.")
-			fmt.Println()
-
-			newTask.Story, err = reader.ReadString('\n')
+			ux.print("Input the story.")
+			newTask.Story, err = ux.queryLine()
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
-			fmt.Println()
 
 			for index = len(tasks); index > 0; index-- {
-				fmt.Println("+ Should the new task be opened before this one?")
-				fmt.Println()
-
-				display(tasks, index-1)
-				fmt.Println()
-
-				yes, err := queryYesNo()
+				ux.print("Should the new task be opened before this one?")
+				ux.display(tasks, index-1)
+				yes, err := ux.queryYesNo()
 				if err != nil {
 					return err
 				}
-				fmt.Println()
 				if !yes {
 					break
 				}
 			}
 		}
 
-		fmt.Printf("+ Inserting new task at index %d.\n", index)
+		ux.print("Inserting new task at index %d.", index)
 		return write(flags.queue, insert(tasks, normalize(&newTask), index))
 	},
 }
@@ -137,15 +126,12 @@ var listCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to read queue file")
 		}
 		if len(tasks) == 0 {
-			fmt.Println("no tasks in queue")
+			ux.print("No tasks in queue.")
 			return nil
 		}
-		lastIndex := len(tasks) - 1
-		for index := range tasks[:lastIndex] {
-			display(tasks, index)
-			fmt.Println()
+		for index := range tasks {
+			ux.display(tasks, index)
 		}
-		display(tasks, lastIndex)
 		return nil
 	},
 }
@@ -168,28 +154,22 @@ var openCmd = &cobra.Command{
 			index = flags.index
 		} else {
 			for index = 0; index < len(tasks); index++ {
-				fmt.Println("+ Would you like to open this task?")
-				fmt.Println()
-
-				display(tasks, index)
-				fmt.Println()
-
-				yes, err := queryYesNo()
+				ux.print("Would you like to open this task?")
+				ux.display(tasks, index)
+				yes, err := ux.queryYesNo()
 				if err != nil {
 					return err
 				}
-				fmt.Println()
-
 				if yes {
 					break
 				}
 			}
 			if index == len(tasks) {
-				fmt.Println("+ End of queue. No task opened.")
+				ux.print("End of queue. No task opened.")
 				return nil
 			}
 		}
-		fmt.Println("+ Opening task.")
+		ux.print("Opening task.")
 		return write(flags.queue, open(tasks, index))
 	},
 }
@@ -203,27 +183,20 @@ var doneCmd = &cobra.Command{
 			return errors.Wrap(err, "failed to read queue file")
 		}
 		if len(tasks) == 0 {
-			fmt.Println("+ No tasks in queue.")
+			ux.print("No tasks in queue.")
 			return nil
 		}
-
-		fmt.Println("+ Is this task done?")
-		fmt.Println()
-
-		display(tasks, 0)
-		fmt.Println()
-
-		yes, err := queryYesNo()
+		ux.print("Is this task done?")
+		ux.display(tasks, 0)
+		yes, err := ux.queryYesNo()
 		if err != nil {
 			return err
 		}
-		fmt.Println()
-
 		if !yes {
-			fmt.Println("+ Keeping current task.")
+			ux.print("Keeping current task.")
 			return nil
 		}
-		fmt.Println("+ Removing current task.")
+		ux.print("Removing current task.")
 		return write(flags.queue, tasks[1:])
 	},
 }
@@ -317,7 +290,57 @@ func normalize(task *Task) *Task {
 	return task
 }
 
-func display(tasks []*Task, index int) {
+func trim(str string) string {
+	return regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(str), " ")
+}
+
+type UX struct {
+	rd *bufio.Reader
+	nl bool
+}
+
+func (u *UX) reader() *bufio.Reader {
+	if u.rd == nil {
+		u.rd = bufio.NewReader(os.Stdin)
+	}
+	return u.rd
+}
+
+func (u *UX) newline() {
+	if u.nl {
+		fmt.Println()
+	}
+	u.nl = true
+}
+
+func (u *UX) queryYesNo() (bool, error) {
+	u.newline()
+	for {
+		fmt.Print("Enter y|n: ")
+		resp, err := u.reader().ReadString('\n')
+		if err != nil {
+			return false, errors.Wrap(err, "failed to query user")
+		}
+		switch strings.TrimSpace(resp) {
+		case "y":
+			return true, nil
+		case "n":
+			return false, nil
+		}
+	}
+}
+
+func (u *UX) queryLine() (string, error) {
+	u.newline()
+	return u.reader().ReadString('\n')
+}
+
+func (u *UX) print(format string, args ...interface{}) {
+	u.newline()
+	fmt.Printf("+ "+format+"\n", args...)
+}
+
+func (u *UX) display(tasks []*Task, index int) {
 	task := tasks[index]
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
@@ -356,27 +379,7 @@ func display(tasks []*Task, index int) {
 		}
 	}
 
+	u.newline()
 	fmt.Println(title)
 	fmt.Println(story)
-}
-
-func trim(str string) string {
-	return regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(str), " ")
-}
-
-func queryYesNo() (bool, error) {
-	reader := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Print("Enter y|n: ")
-		resp, err := reader.ReadString('\n')
-		if err != nil {
-			return false, errors.Wrap(err, "failed to query user")
-		}
-		switch strings.TrimSpace(resp) {
-		case "y":
-			return true, nil
-		case "n":
-			return false, nil
-		}
-	}
 }
