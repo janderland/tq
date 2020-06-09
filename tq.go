@@ -39,7 +39,7 @@ var topCmd = &cobra.Command{
 		of the queue.`),
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if len(tasks) == 0 {
-			ui.print("No tasks in queue.")
+			ui.message("No tasks in queue.")
 			return nil
 		}
 		ui.display(tasks, 0)
@@ -84,20 +84,20 @@ var newCmd = &cobra.Command{
 			newTask.Story = flags.story
 			index = flags.index
 		} else {
-			ui.print("Input the title.")
+			ui.message("Input the title.")
 			newTask.Title, err = ui.queryLine()
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
 
-			ui.print("Input the story.")
+			ui.message("Input the story.")
 			newTask.Story, err = ui.queryLine()
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
 
 			for index = len(tasks); index > 0; index-- {
-				ui.print("Should the new task be opened before this one?")
+				ui.message("Should the new task be opened before this one?")
 				ui.display(tasks, index-1)
 				yes, err := ui.queryYesNo()
 				if err != nil {
@@ -109,7 +109,7 @@ var newCmd = &cobra.Command{
 			}
 		}
 
-		ui.print("Inserting new task at index %d.", index)
+		ui.message("Inserting new task at index %d.", index)
 		return write(flags.queue, insert(tasks, normalize(&newTask), index))
 	},
 }
@@ -119,7 +119,7 @@ var listCmd = &cobra.Command{
 	Short: "List all tasks in the queue.",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if len(tasks) == 0 {
-			ui.print("No tasks in queue.")
+			ui.message("No tasks in queue.")
 			return nil
 		}
 		for index := range tasks {
@@ -143,7 +143,7 @@ var openCmd = &cobra.Command{
 			index = flags.index
 		} else {
 			for index = 0; index < len(tasks); index++ {
-				ui.print("Would you like to open this task?")
+				ui.message("Would you like to open this task?")
 				ui.display(tasks, index)
 				yes, err := ui.queryYesNo()
 				if err != nil {
@@ -154,11 +154,11 @@ var openCmd = &cobra.Command{
 				}
 			}
 			if index == len(tasks) {
-				ui.print("End of queue. No task opened.")
+				ui.message("End of queue. No task opened.")
 				return nil
 			}
 		}
-		ui.print("Opening task.")
+		ui.message("Opening task.")
 		return write(flags.queue, open(tasks, index))
 	},
 }
@@ -168,20 +168,20 @@ var doneCmd = &cobra.Command{
 	Short: "Remove the current task from the queue.",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if len(tasks) == 0 {
-			ui.print("No tasks in queue.")
+			ui.message("No tasks in queue.")
 			return nil
 		}
-		ui.print("Is this task done?")
+		ui.message("Is this task done?")
 		ui.display(tasks, 0)
 		yes, err := ui.queryYesNo()
 		if err != nil {
 			return err
 		}
 		if !yes {
-			ui.print("Keeping current task.")
+			ui.message("Keeping current task.")
 			return nil
 		}
-		ui.print("Removing current task.")
+		ui.message("Removing current task.")
 		return write(flags.queue, tasks[1:])
 	},
 }

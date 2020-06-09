@@ -53,7 +53,7 @@ func (u *UI) queryLine() (string, error) {
 	return u.reader().ReadString('\n')
 }
 
-func (u *UI) print(format string, args ...interface{}) {
+func (u *UI) message(format string, args ...interface{}) {
 	u.newline()
 	fmt.Printf("+ "+format+"\n", args...)
 }
