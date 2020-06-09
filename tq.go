@@ -347,7 +347,9 @@ func (u *UX) display(tasks []*Task, index int) {
 		title += " "
 	}
 	count := len(title)
-	titleWords := append(strings.Split(task.Title, " "), fmt.Sprintf("[%s]", task.State))
+	titleWords := append(
+		[]string{fmt.Sprintf("[%s]", task.State)},
+		strings.Split(task.Title, " ")...)
 	for i, word := range titleWords {
 		title += word
 		count += len(word)
