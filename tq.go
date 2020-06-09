@@ -324,30 +324,35 @@ func display(tasks []*Task, index int) {
 		title += " "
 	}
 	count := len(title)
-	words := append(strings.Split(task.Title, " "), fmt.Sprintf("[%s]", task.State))
-	for _, word := range words {
+	titleWords := append(strings.Split(task.Title, " "), fmt.Sprintf("[%s]", task.State))
+	for i, word := range titleWords {
 		title += word
 		count += len(word)
-		if count > flags.width {
-			title += "\n    "
-			count = 4
-		} else {
-			title += " "
-			count++
+		if i != len(titleWords)-1 {
+			if count > flags.width {
+				title += "\n    "
+				count = 4
+			} else {
+				title += " "
+				count++
+			}
 		}
 	}
 
 	story := "    "
 	count = len(story)
-	for _, word := range strings.Split(task.Story, " ") {
+	storyWords := strings.Split(task.Story, " ")
+	for i, word := range storyWords {
 		story += word
 		count += len(word)
-		if count > flags.width {
-			story += "\n    "
-			count = 4
-		} else {
-			story += " "
-			count++
+		if i != len(storyWords)-1 {
+			if count > flags.width {
+				story += "\n    "
+				count = 4
+			} else {
+				story += " "
+				count++
+			}
 		}
 	}
 
