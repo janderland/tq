@@ -34,9 +34,7 @@ var rootCmd = &cobra.Command{
 var topCmd = &cobra.Command{
 	Use:   "top",
 	Short: "View the current task.",
-	Long: trim(`
-		View the current task. This is the task at the front
-		of the queue.`),
+	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if len(tasks) == 0 {
 			ui.message("No tasks in queue.")
@@ -50,12 +48,7 @@ var topCmd = &cobra.Command{
 var newCmd = &cobra.Command{
 	Use:   "new",
 	Short: "Add a new task to the queue.",
-	Long: trim(`
-		Add a new task to the queue. Iterate through the
-		tasks in the queue from back to front, evaluating
-		whether each task has higher priority than the new
-		task. When a higher priority task is found, insert
-		the new task behind this task.`),
+	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		flagCount := 0
 		if flags.title != "" {
@@ -117,6 +110,7 @@ var newCmd = &cobra.Command{
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all tasks in the queue.",
+	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if len(tasks) == 0 {
 			ui.message("No tasks in queue.")
@@ -132,11 +126,7 @@ var listCmd = &cobra.Command{
 var openCmd = &cobra.Command{
 	Use:   "open",
 	Short: "Change your current task.",
-	Long: trim(`
-		Change the current task. Iterate through the tasks in
-		the queue from front to back. Select a task, change
-		it's state to "open", and move it to the front of the
-		queue.`),
+	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		var index int
 		if flags.index != -1 {
@@ -166,6 +156,7 @@ var openCmd = &cobra.Command{
 var doneCmd = &cobra.Command{
 	Use:   "done",
 	Short: "Remove the current task from the queue.",
+	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if len(tasks) == 0 {
 			ui.message("No tasks in queue.")

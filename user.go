@@ -24,11 +24,38 @@ func (u *UI) reader() *bufio.Reader {
 	return u.rd
 }
 
+// Prints a newline, if necessary,
+// between each user interaction.
 func (u *UI) newline() {
 	if u.nl {
 		fmt.Println()
 	}
 	u.nl = true
+}
+
+// Formats a string to be printed to the console. Newlines
+// are added between words where needed to ensure no single
+// line exceeds "u.Width" characters. Also, each line
+// (except for the first) is prefixed with "indent" number
+// of spaces.
+func (u *UI) paragraph(str string, indent int) string {
+	wordList := strings.Split(str, " ")
+	count := 0
+	str = ""
+	for i, word := range wordList {
+		str += word
+		count += len(word)
+		if i != len(wordList)-1 {
+			if count > u.Width {
+				str += "\n" + spaces(indent)
+				count = indent
+			} else {
+				str += " "
+				count++
+			}
+		}
+	}
+	return str
 }
 
 func (u *UI) queryYesNo() (bool, error) {
@@ -58,48 +85,17 @@ func (u *UI) message(format string, args ...interface{}) {
 	fmt.Printf("+ "+format+"\n", args...)
 }
 
+// Displays the task at the given index in the console.
 func (u *UI) display(tasks []*Task, index int) {
 	task := tasks[index]
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
 		title += " "
 	}
-	count := len(title)
-	titleWords := append(
-		[]string{fmt.Sprintf("[%s]", task.State)},
-		strings.Split(task.Title, " ")...)
-	for i, word := range titleWords {
-		title += word
-		count += len(word)
-		if i != len(titleWords)-1 {
-			if count > u.Width {
-				title += "\n    "
-				count = 4
-			} else {
-				title += " "
-				count++
-			}
-		}
-	}
-
-	story := "    "
-	count = len(story)
-	storyWords := strings.Split(task.Story, " ")
-	for i, word := range storyWords {
-		story += word
-		count += len(word)
-		if i != len(storyWords)-1 {
-			if count > u.Width {
-				story += "\n    "
-				count = 4
-			} else {
-				story += " "
-				count++
-			}
-		}
-	}
-
+	title += fmt.Sprintf("[%s] ", task.State)
+	title += task.Title
+	story := spaces(4) + task.Story
 	u.newline()
-	fmt.Println(title)
-	fmt.Println(story)
+	fmt.Println(u.paragraph(title, 4))
+	fmt.Println(u.paragraph(story, 4))
 }
