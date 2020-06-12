@@ -11,10 +11,9 @@ import (
 // Provides a uniform set of UI functions. Ensures
 // there is an empty line between every statement.
 type UI struct {
-	rd *bufio.Reader
-	nl bool
-
-	Width int
+	rd    *bufio.Reader
+	nl    bool
+	width int
 }
 
 func (u *UI) reader() *bufio.Reader {
@@ -35,7 +34,7 @@ func (u *UI) newline() {
 
 // Formats a string to be printed to the console. Newlines
 // are added between words where needed to ensure no single
-// line exceeds "u.Width" characters. Also, each line
+// line exceeds "u.width" characters. Also, each line
 // (except for the first) is prefixed with "indent" number
 // of spaces.
 func (u *UI) paragraph(str string, indent int) string {
@@ -46,7 +45,7 @@ func (u *UI) paragraph(str string, indent int) string {
 		str += word
 		count += len(word)
 		if i != len(wordList)-1 {
-			if count > u.Width {
+			if count > u.width {
 				str += "\n" + spaces(indent)
 				count = indent
 			} else {

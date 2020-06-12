@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to read queue file")
 		}
-		ui = &UI{Width: flags.width}
+		ui = &UI{width: flags.width}
 		return nil
 	},
 }
