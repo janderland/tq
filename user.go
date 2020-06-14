@@ -81,20 +81,27 @@ func (u *UI) queryLine() (string, error) {
 
 func (u *UI) message(format string, args ...interface{}) {
 	u.newline()
-	fmt.Printf("+ "+format+"\n", args...)
+	fmt.Println(u.paragraph(fmt.Sprintf("+ "+format, args...), 2))
 }
 
-// Displays the task at the given index in the console.
-func (u *UI) display(tasks []*Task, index int) {
-	task := tasks[index]
+func (u *UI) display(tasks TaskQueue, index int) {
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
 		title += " "
 	}
-	title += fmt.Sprintf("[%s] ", task.State)
-	title += task.Title
-	story := spaces(4) + task.Story
+	if index <= tasks.OpenIndex {
+		title += "[open] "
+	} else {
+		title += "[todo] "
+	}
+	title += tasks.TaskList[index].Title
+	story := spaces(4) + tasks.TaskList[index].Story
 	u.newline()
 	fmt.Println(u.paragraph(title, 4))
 	fmt.Println(u.paragraph(story, 4))
+}
+
+func (u *UI) line() {
+	u.newline()
+	fmt.Println("---")
 }

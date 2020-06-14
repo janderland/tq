@@ -7,63 +7,75 @@ import (
 	"strings"
 )
 
-const (
-	todoState = "todo"
-	openState = "open"
-)
-
 type Task struct {
 	Title string
 	Story string
-	State string
 }
 
-func read(path string) ([]*Task, error) {
+type TaskQueue struct {
+	TaskList  []*Task
+	OpenIndex int
+}
+
+func load(path string) (TaskQueue, error) {
+	tq := TaskQueue{OpenIndex: -1}
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return tq, nil
 		}
-		return nil, err
+		return tq, err
 	}
-	var tasks []*Task
-	if err := json.NewDecoder(file).Decode(&tasks); err != nil {
-		return nil, errors.Wrap(err, "failed to decode file")
+	if err := json.NewDecoder(file).Decode(&tq); err != nil {
+		return tq, errors.Wrap(err, "failed to decode file")
 	}
-	for _, task := range tasks {
-		normalize(task)
+	for _, task := range tq.TaskList {
+		task.normalize()
 	}
-	return tasks, nil
+	return tq, nil
 }
 
-func write(path string, tasks []*Task) error {
+func (tq TaskQueue) save(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return errors.Wrap(err, "failed to create file")
 	}
-	if err := json.NewEncoder(file).Encode(tasks); err != nil {
+	if err := json.NewEncoder(file).Encode(tq); err != nil {
 		return errors.Wrap(err, "failed to encode file")
 	}
 	return nil
 }
 
-func insert(tasks []*Task, newTask *Task, index int) []*Task {
-	tasks = append(tasks, nil)
-	copy(tasks[index+1:], tasks[index:])
-	tasks[index] = newTask
-	return tasks
+func (tq TaskQueue) insert(newTask *Task, index int) TaskQueue {
+	tq.TaskList = append(tq.TaskList, nil)
+	copy(tq.TaskList[index+1:], tq.TaskList[index:])
+	tq.TaskList[index] = newTask
+	if index <= tq.OpenIndex {
+		tq.OpenIndex++
+	}
+	return tq
 }
 
-func open(tasks []*Task, index int) []*Task {
-	openTask := tasks[index]
-	openTask.State = openState
-	copy(tasks[1:], tasks[:index])
-	tasks[0] = openTask
-	return tasks
+func (tq TaskQueue) front(index int) TaskQueue {
+	openTask := tq.TaskList[index]
+	copy(tq.TaskList[1:], tq.TaskList[:index])
+	tq.TaskList[0] = openTask
+	tq.OpenIndex++
+	return tq
 }
 
-func normalize(task *Task) *Task {
-	task.Title = strings.ToUpper(trim(task.Title))
-	task.Story = trim(task.Story)
-	return task
+func (tq TaskQueue) pop() TaskQueue {
+	tq.TaskList = tq.TaskList[1:]
+	tq.OpenIndex--
+	return tq
+}
+
+func (tq TaskQueue) len() int {
+	return len(tq.TaskList)
+}
+
+func (t *Task) normalize() *Task {
+	t.Title = strings.ToUpper(trim(t.Title))
+	t.Story = trim(t.Story)
+	return t
 }

@@ -12,21 +12,22 @@ var flags struct {
 	story string
 	index int
 	width int
+	force bool
 }
 
-var tasks []*Task
-var ui *UI
+var tasks TaskQueue
+var ui UI
 
 var rootCmd = &cobra.Command{
 	Use:   "tq",
 	Short: "Task Queue",
 	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 		var err error
-		tasks, err = read(flags.queue)
+		tasks, err = load(flags.queue)
 		if err != nil {
-			return errors.Wrap(err, "failed to read queue file")
+			return errors.Wrap(err, "failed to load queue file")
 		}
-		ui = &UI{width: flags.width}
+		ui = UI{width: flags.width}
 		return nil
 	},
 }
@@ -36,7 +37,7 @@ var topCmd = &cobra.Command{
 	Short: "View the current task.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if len(tasks) == 0 {
+		if len(tasks.TaskList) == 0 {
 			ui.message("No tasks in queue.")
 			return nil
 		}
@@ -64,14 +65,14 @@ var newCmd = &cobra.Command{
 			return errors.New("flags 'title', 'story', & 'index' must be all set or none")
 		}
 
-		newTask := Task{State: todoState}
+		var newTask Task
 		var index int
 		var err error
 
 		if flagCount != 0 {
-			if flags.index > len(tasks) || flags.index < 0 {
+			if flags.index <= tasks.OpenIndex || flags.index > tasks.len() {
 				return errors.Errorf(
-					"flag 'index' must be in (0, %v)", len(tasks))
+					"flag 'index' must be in [%v, %v)", tasks.OpenIndex, tasks.len())
 			}
 			newTask.Title = flags.title
 			newTask.Story = flags.story
@@ -86,10 +87,10 @@ var newCmd = &cobra.Command{
 			ui.message("Input the story.")
 			newTask.Story, err = ui.queryLine()
 			if err != nil {
-				return errors.Wrap(err, "failed to read title")
+				return errors.Wrap(err, "failed to read story")
 			}
 
-			for index = len(tasks); index > 0; index-- {
+			for index = tasks.len(); index > tasks.OpenIndex+1; index-- {
 				ui.message("Should the new task be opened before this one?")
 				ui.display(tasks, index-1)
 				yes, err := ui.queryYesNo()
@@ -103,7 +104,7 @@ var newCmd = &cobra.Command{
 		}
 
 		ui.message("Inserting new task at index %d.", index)
-		return write(flags.queue, insert(tasks, normalize(&newTask), index))
+		return tasks.insert(newTask.normalize(), index).save(flags.queue)
 	},
 }
 
@@ -112,12 +113,19 @@ var listCmd = &cobra.Command{
 	Short: "List all tasks in the queue.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if len(tasks) == 0 {
+		if !flags.force {
+			ui.message("Not using this command is preferred.")
+			return nil
+		}
+		if tasks.len() == 0 {
 			ui.message("No tasks in queue.")
 			return nil
 		}
-		for index := range tasks {
+		for index := 0; index < tasks.len(); index++ {
 			ui.display(tasks, index)
+			if index == tasks.OpenIndex {
+				ui.line()
+			}
 		}
 		return nil
 	},
@@ -132,7 +140,7 @@ var openCmd = &cobra.Command{
 		if flags.index != -1 {
 			index = flags.index
 		} else {
-			for index = 0; index < len(tasks); index++ {
+			for index = 0; index < tasks.len(); index++ {
 				ui.message("Would you like to open this task?")
 				ui.display(tasks, index)
 				yes, err := ui.queryYesNo()
@@ -143,13 +151,13 @@ var openCmd = &cobra.Command{
 					break
 				}
 			}
-			if index == len(tasks) {
+			if index == tasks.len() {
 				ui.message("End of queue. No task opened.")
 				return nil
 			}
 		}
 		ui.message("Opening task.")
-		return write(flags.queue, open(tasks, index))
+		return tasks.front(index).save(flags.queue)
 	},
 }
 
@@ -158,7 +166,7 @@ var doneCmd = &cobra.Command{
 	Short: "Remove the current task from the queue.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if len(tasks) == 0 {
+		if tasks.len() == 0 {
 			ui.message("No tasks in queue.")
 			return nil
 		}
@@ -173,7 +181,7 @@ var doneCmd = &cobra.Command{
 			return nil
 		}
 		ui.message("Removing current task.")
-		return write(flags.queue, tasks[1:])
+		return tasks.pop().save(flags.queue)
 	},
 }
 
@@ -190,6 +198,7 @@ func init() {
 	newCmd.Flags().StringVarP(&flags.title, "title", "t", "", "new task's title")
 	newCmd.Flags().StringVarP(&flags.story, "story", "s", "", "new task's story")
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
+	listCmd.Flags().BoolVar(&flags.force, "force", false, "ignore advice & show the list")
 	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
 
 	rootCmd.AddCommand(topCmd)
