@@ -144,7 +144,11 @@ var openCmd = &cobra.Command{
 		if flags.index != -1 {
 			index = flags.index
 		} else {
-			for index = 0; index < tasks.len(); index++ {
+			start := 0
+			if tasks.OpenIndex > -1 {
+				start = 1
+			}
+			for index = start; index < tasks.len(); index++ {
 				ui.message("Would you like to open this task?")
 				ui.display(tasks, index)
 				yes, err := ui.queryYesNo()
