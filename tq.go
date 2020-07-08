@@ -41,6 +41,10 @@ var topCmd = &cobra.Command{
 			ui.message("No tasks in queue.")
 			return nil
 		}
+		if tasks.OpenIndex < 0 {
+			ui.message("No tasks are opened.")
+			return nil
+		}
 		ui.display(tasks, 0)
 		return nil
 	},
