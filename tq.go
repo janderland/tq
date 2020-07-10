@@ -41,7 +41,7 @@ var topCmd = &cobra.Command{
 			ui.message("No tasks in queue.")
 			return nil
 		}
-		if tasks.OpenIndex < 0 {
+		if !tasks.hasOpened() {
 			ui.message("No tasks are opened.")
 			return nil
 		}
@@ -74,9 +74,8 @@ var newCmd = &cobra.Command{
 		var err error
 
 		if flagCount != 0 {
-			if flags.index <= tasks.OpenIndex || flags.index > tasks.len() {
-				return errors.Errorf(
-					"flag 'index' must be in [%v, %v)", tasks.OpenIndex, tasks.len())
+			if err := tasks.validateNewIndex(flags.index); err != nil {
+				return err
 			}
 			newTask.Title = flags.title
 			newTask.Story = flags.story
@@ -94,7 +93,7 @@ var newCmd = &cobra.Command{
 				return errors.Wrap(err, "failed to read story")
 			}
 
-			for index = tasks.len(); index > tasks.OpenIndex+1; index-- {
+			for index = tasks.len(); index > tasks.lastOpenedIndex()+1; index-- {
 				ui.message("Should the new task be opened before this one?")
 				ui.display(tasks, index-1)
 				yes, err := ui.queryYesNo()
@@ -127,7 +126,7 @@ var listCmd = &cobra.Command{
 		}
 		for index := 0; index < tasks.len(); index++ {
 			ui.display(tasks, index)
-			if index == tasks.OpenIndex {
+			if index == tasks.lastOpenedIndex() {
 				ui.line()
 			}
 		}
@@ -145,7 +144,7 @@ var openCmd = &cobra.Command{
 			index = flags.index
 		} else {
 			start := 0
-			if tasks.OpenIndex > -1 {
+			if tasks.hasOpened() {
 				start = 1
 			}
 			for index = start; index < tasks.len(); index++ {

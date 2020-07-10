@@ -89,7 +89,7 @@ func (u *UI) display(tasks TaskQueue, index int) {
 	if index < 10 {
 		title += " "
 	}
-	if index <= tasks.OpenIndex {
+	if index <= tasks.lastOpenedIndex() {
 		title += "[open] "
 	} else {
 		title += "[todo] "
