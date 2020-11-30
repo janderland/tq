@@ -37,7 +37,7 @@ var topCmd = &cobra.Command{
 	Short: "View the current task.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if len(tasks.TaskList) == 0 {
+		if tasks.len() == 0 {
 			ui.message("No tasks in queue.")
 			return nil
 		}
