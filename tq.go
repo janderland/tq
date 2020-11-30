@@ -12,7 +12,6 @@ var flags struct {
 	story string
 	index int
 	width int
-	force bool
 }
 
 var tasks TaskQueue
@@ -116,10 +115,6 @@ var listCmd = &cobra.Command{
 	Short: "List all tasks in the queue.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if !flags.force {
-			ui.message("Not using this command is preferred.")
-			return nil
-		}
 		if tasks.len() == 0 {
 			ui.message("No tasks in queue.")
 			return nil
@@ -205,7 +200,6 @@ func init() {
 	newCmd.Flags().StringVarP(&flags.title, "title", "t", "", "new task's title")
 	newCmd.Flags().StringVarP(&flags.story, "story", "s", "", "new task's story")
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
-	listCmd.Flags().BoolVar(&flags.force, "force", false, "ignore advice & show the list")
 	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
 
 	rootCmd.AddCommand(topCmd)
