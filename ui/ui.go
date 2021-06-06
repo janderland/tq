@@ -22,6 +22,10 @@ func New(width int) UI {
 	return UI{width: width}
 }
 
+// QueryYesNo queries the user for a 'y' or 'n'.
+// If the user enters another character, the prompt
+// is repeated. If the user enters 'y' or 'n',
+// then true or false is returned respectively.
 func (u *UI) QueryYesNo() (bool, error) {
 	u.newline()
 	for {
@@ -39,11 +43,13 @@ func (u *UI) QueryYesNo() (bool, error) {
 	}
 }
 
+// Message prints a message to the user.
 func (u *UI) Message(format string, args ...interface{}) {
 	u.newline()
 	fmt.Println(u.paragraph(fmt.Sprintf("+ "+format, args...), 2))
 }
 
+// Display prints the task found at the given index in the given TaskQueue.
 func (u *UI) Display(tasks state.TaskQueue, index int) {
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
@@ -61,6 +67,7 @@ func (u *UI) Display(tasks state.TaskQueue, index int) {
 	fmt.Println(u.paragraph(story, 4))
 }
 
+// Line prints a horizontal separator.
 func (u *UI) Line() {
 	u.newline()
 	fmt.Println("---")
