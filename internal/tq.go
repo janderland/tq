@@ -227,7 +227,7 @@ var doneCmd = &cobra.Command{
 
 var clearCmd = &cobra.Command{
 	Use:   "clear",
-	Short: "Clears all tasks from the queue.",
+	Short: "Clear all tasks from the queue.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if !flags.force {
