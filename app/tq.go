@@ -1,24 +1,24 @@
-package main
+package app
 
 import (
-	"os"
-
 	"github.com/janderland/tq/state"
 	"github.com/janderland/tq/ui"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-var flags struct {
-	queue string
-	title string
-	story string
-	index int
-	width int
-}
+var (
+	flags struct {
+		queue string
+		title string
+		story string
+		index int
+		width int
+	}
 
-var tasks state.TaskQueue
-var ux ui.UI
+	tasks state.TaskQueue
+	ux    ui.UI
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "tq",
@@ -251,8 +251,6 @@ func init() {
 	rootCmd.AddCommand(doneCmd)
 }
 
-func main() {
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+func Run() error {
+	return rootCmd.Execute()
 }
