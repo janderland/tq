@@ -14,6 +14,7 @@ var (
 		story string
 		index int
 		width int
+		force bool
 	}
 
 	tasks state.TaskQueue
@@ -217,6 +218,25 @@ var doneCmd = &cobra.Command{
 	},
 }
 
+var clearCmd = &cobra.Command{
+	Use:   "clear",
+	Short: "Clears all tasks from the queue.",
+	Args:  cobra.NoArgs,
+	RunE: func(_ *cobra.Command, _ []string) error {
+		if !flags.force {
+			ux.Message("Are you sure you want to clear all tasks?")
+			yes, err := ux.QueryYesNo()
+			if err != nil {
+				return err
+			}
+			if !yes {
+				return nil
+			}
+		}
+		return state.TaskQueue{}.Save(flags.queue)
+	},
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVarP(
 		&flags.queue, "queue", "q", "", "file path for the queue's contents")
@@ -232,6 +252,7 @@ func init() {
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
 	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
 	editCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to edit")
+	clearCmd.Flags().BoolVarP(&flags.force, "force", "f", false, "clear without confirmation")
 
 	rootCmd.AddCommand(topCmd)
 	rootCmd.AddCommand(newCmd)
@@ -239,6 +260,7 @@ func init() {
 	rootCmd.AddCommand(openCmd)
 	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(doneCmd)
+	rootCmd.AddCommand(clearCmd)
 }
 
 func Run() error {
