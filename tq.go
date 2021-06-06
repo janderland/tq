@@ -163,6 +163,43 @@ var openCmd = &cobra.Command{
 	},
 }
 
+var editCmd = &cobra.Command{
+	Use: "edit",
+	Short: "Edit a task.",
+	Args: cobra.NoArgs,
+	RunE: func(_ *cobra.Command, _ []string) error {
+		var index int
+		if flags.index != -1 {
+			index = flags.index
+		} else {
+			start := 0
+			if tasks.hasOpened() {
+				start = 1
+			}
+			for index = start; index < tasks.len(); index++ {
+				ui.message("Would you like to edit this task?")
+				ui.display(tasks, index)
+				yes, err := ui.queryYesNo()
+				if err != nil {
+					return err
+				}
+				if yes {
+					break
+				}
+			}
+			if index == tasks.len() {
+				ui.message("End of queue. No task edited.")
+				return nil
+			}
+		}
+		ui.message("Editing task.")
+		if err := tasks.at(index).edit(); err != nil {
+			return err
+		}
+		return tasks.save(flags.queue)
+	},
+}
+
 var doneCmd = &cobra.Command{
 	Use:   "done",
 	Short: "Remove the current task from the queue.",
@@ -201,11 +238,13 @@ func init() {
 	newCmd.Flags().StringVarP(&flags.story, "story", "s", "", "new task's story")
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
 	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
+	editCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to edit")
 
 	rootCmd.AddCommand(topCmd)
 	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(openCmd)
+	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(doneCmd)
 }
 

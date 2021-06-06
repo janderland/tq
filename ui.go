@@ -94,8 +94,8 @@ func (u *UI) display(tasks TaskQueue, index int) {
 	} else {
 		title += "[todo] "
 	}
-	title += tasks.TaskList[index].Title
-	story := spaces(4) + tasks.TaskList[index].Story
+	title += tasks.at(index).Title
+	story := spaces(4) + tasks.at(index).Story
 	u.newline()
 	fmt.Println(u.paragraph(title, 4))
 	fmt.Println(u.paragraph(story, 4))

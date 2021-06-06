@@ -2,8 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -88,6 +91,10 @@ func (tq TaskQueue) pop() TaskQueue {
 	return tq
 }
 
+func (tq TaskQueue) at(index int) *Task{
+	return tq.TaskList[index]
+}
+
 // Returns an error if the given index shouldn't be used as the index of a new
 // task. New tasks are only supposed to be inserted after the opened tasks.
 func (tq TaskQueue) validateNewIndex(index int) error {
@@ -117,4 +124,48 @@ func (t *Task) normalize() *Task {
 	t.Title = strings.ToUpper(trim(t.Title))
 	t.Story = trim(t.Story)
 	return t
+}
+
+func (t *Task) edit() error {
+	namePattern := "*_" + strings.ReplaceAll(t.Title, " ", "_")
+	file, err := ioutil.TempFile("", namePattern)
+	if err != nil {
+		return err
+	}
+
+	enc := json.NewEncoder(file)
+	enc.SetIndent("", "  ")
+	err = enc.Encode(t)
+	if err != nil {
+		return err
+	}
+	if err = file.Close(); err != nil {
+		return err
+	}
+
+	shell := strings.TrimSpace(os.Getenv("SHELL"))
+	if len(shell) == 0 {
+		shell = "sh"
+	}
+	editor := strings.TrimSpace(os.Getenv("EDITOR"))
+	if len(editor) == 0 {
+		editor = "vim"
+	}
+	cmd := exec.Command(shell, "-c", fmt.Sprintf("%s %s", editor, file.Name()))
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	if err = cmd.Run(); err != nil {
+		return err
+	}
+
+	file, err = os.Open(file.Name())
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(file)
+	if err = dec.Decode(t); err != nil {
+		return err
+	}
+
+	return nil
 }
