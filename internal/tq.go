@@ -71,9 +71,8 @@ var newCmd = &cobra.Command{
 			return errors.New("flags 'title', 'story', & 'index' must be all set or none")
 		}
 
-		var newTask state.Task
+		newTask := state.Task{Title: "NEW"}
 		var index int
-		var err error
 
 		if flagCount != 0 {
 			if err := tasks.ValidateNewIndex(flags.index); err != nil {
@@ -83,18 +82,9 @@ var newCmd = &cobra.Command{
 			newTask.Story = flags.story
 			index = flags.index
 		} else {
-			ux.Message("Input the title.")
-			newTask.Title, err = ux.QueryLine()
-			if err != nil {
-				return errors.Wrap(err, "failed to read title")
+			if err := newTask.Edit(); err != nil {
+				return err
 			}
-
-			ux.Message("Input the story.")
-			newTask.Story, err = ux.QueryLine()
-			if err != nil {
-				return errors.Wrap(err, "failed to read story")
-			}
-
 			for index = tasks.Len(); index > tasks.LastOpenedIndex()+1; index-- {
 				ux.Message("Should the new task be opened before this one?")
 				ux.Display(tasks, index-1)

@@ -3,10 +3,11 @@ package ui
 import (
 	"bufio"
 	"fmt"
-	"github.com/janderland/tq/state"
-	"github.com/pkg/errors"
 	"os"
 	"strings"
+
+	"github.com/janderland/tq/state"
+	"github.com/pkg/errors"
 )
 
 // UI provides a uniform set of IO functions. Ensures
@@ -19,6 +20,50 @@ type UI struct {
 
 func New(width int) UI {
 	return UI{width: width}
+}
+
+func (u *UI) QueryYesNo() (bool, error) {
+	u.newline()
+	for {
+		fmt.Print("Enter y|n: ")
+		resp, err := u.reader().ReadString('\n')
+		if err != nil {
+			return false, errors.Wrap(err, "failed to query user")
+		}
+		switch strings.TrimSpace(resp) {
+		case "y":
+			return true, nil
+		case "n":
+			return false, nil
+		}
+	}
+}
+
+func (u *UI) Message(format string, args ...interface{}) {
+	u.newline()
+	fmt.Println(u.paragraph(fmt.Sprintf("+ "+format, args...), 2))
+}
+
+func (u *UI) Display(tasks state.TaskQueue, index int) {
+	title := fmt.Sprintf("%d. ", index)
+	if index < 10 {
+		title += " "
+	}
+	if index <= tasks.LastOpenedIndex() {
+		title += "[open] "
+	} else {
+		title += "[todo] "
+	}
+	title += tasks.At(index).Title
+	story := spaces(4) + tasks.At(index).Story
+	u.newline()
+	fmt.Println(u.paragraph(title, 4))
+	fmt.Println(u.paragraph(story, 4))
+}
+
+func (u *UI) Line() {
+	u.newline()
+	fmt.Println("---")
 }
 
 func (u *UI) reader() *bufio.Reader {
@@ -60,55 +105,6 @@ func (u *UI) paragraph(str string, indent int) string {
 		}
 	}
 	return str
-}
-
-func (u *UI) QueryYesNo() (bool, error) {
-	u.newline()
-	for {
-		fmt.Print("Enter y|n: ")
-		resp, err := u.reader().ReadString('\n')
-		if err != nil {
-			return false, errors.Wrap(err, "failed to query user")
-		}
-		switch strings.TrimSpace(resp) {
-		case "y":
-			return true, nil
-		case "n":
-			return false, nil
-		}
-	}
-}
-
-func (u *UI) QueryLine() (string, error) {
-	u.newline()
-	return u.reader().ReadString('\n')
-}
-
-func (u *UI) Message(format string, args ...interface{}) {
-	u.newline()
-	fmt.Println(u.paragraph(fmt.Sprintf("+ "+format, args...), 2))
-}
-
-func (u *UI) Display(tasks state.TaskQueue, index int) {
-	title := fmt.Sprintf("%d. ", index)
-	if index < 10 {
-		title += " "
-	}
-	if index <= tasks.LastOpenedIndex() {
-		title += "[open] "
-	} else {
-		title += "[todo] "
-	}
-	title += tasks.At(index).Title
-	story := spaces(4) + tasks.At(index).Story
-	u.newline()
-	fmt.Println(u.paragraph(title, 4))
-	fmt.Println(u.paragraph(story, 4))
-}
-
-func (u *UI) Line() {
-	u.newline()
-	fmt.Println("---")
 }
 
 func spaces(count int) string {

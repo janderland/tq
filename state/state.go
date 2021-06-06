@@ -3,12 +3,13 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Task struct {
@@ -132,17 +133,17 @@ func (t *Task) Edit() error {
 	namePattern := "*_" + strings.ReplaceAll(t.Title, " ", "_")
 	file, err := ioutil.TempFile("", namePattern)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to open temp file")
 	}
 
 	enc := json.NewEncoder(file)
 	enc.SetIndent("", "  ")
 	err = enc.Encode(t)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to encode task")
 	}
 	if err = file.Close(); err != nil {
-		return err
+		return errors.Wrap(err, "failed to close file")
 	}
 
 	shell := strings.TrimSpace(os.Getenv("SHELL"))
@@ -157,23 +158,23 @@ func (t *Task) Edit() error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	if err = cmd.Run(); err != nil {
-		return err
+		return errors.Wrap(err, "failed to execute editor")
 	}
 
 	file, err = os.Open(file.Name())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to open file")
 	}
 	dec := json.NewDecoder(file)
 	if err = dec.Decode(t); err != nil {
-		return err
+		return errors.Wrap(err, "failed to decode file")
 	}
 
 	return nil
 }
 
-// Transforms any adjacent whitespace into a single space
-// and removes any leading or trailing whitespace.
+// trim transforms any adjacent whitespace into a single
+// space and removes any leading or trailing whitespace.
 func trim(str string) string {
 	return regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(str), " ")
 }
