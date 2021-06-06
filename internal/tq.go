@@ -86,6 +86,9 @@ var newCmd = &cobra.Command{
 			if err := newTask.Edit(); err != nil {
 				return err
 			}
+			if err := newTask.Normalize(); err != nil {
+				return err
+			}
 			for index = tasks.Len(); index > tasks.LastOpenedIndex()+1; index-- {
 				ux.Message("Should the new task be opened before this one?")
 				ux.Display(tasks, index-1)
@@ -100,7 +103,7 @@ var newCmd = &cobra.Command{
 		}
 
 		ux.Message("Inserting new task at index %d.", index)
-		return tasks.Insert(newTask.Normalize(), index).Save(flags.queue)
+		return tasks.Insert(&newTask, index).Save(flags.queue)
 	},
 }
 
@@ -187,7 +190,11 @@ var editCmd = &cobra.Command{
 			}
 		}
 		ux.Message("Editing task.")
-		if err := tasks.At(index).Edit(); err != nil {
+		task := tasks.At(index)
+		if err := task.Edit(); err != nil {
+			return err
+		}
+		if err := task.Normalize(); err != nil {
 			return err
 		}
 		return tasks.Save(flags.queue)

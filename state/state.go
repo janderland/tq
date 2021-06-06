@@ -2,20 +2,10 @@ package state
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"os"
-	"os/exec"
-	"regexp"
-	"strings"
 
 	"github.com/pkg/errors"
 )
-
-type Task struct {
-	Title string
-	Story string
-}
 
 type TaskQueue struct {
 	TaskList  []*Task
@@ -38,7 +28,7 @@ func Load(path string) (TaskQueue, error) {
 		return tq, errors.Wrap(err, "failed to decode file")
 	}
 	for _, task := range tq.TaskList {
-		task.Normalize()
+		_ = task.Normalize()
 	}
 	return tq, nil
 }
@@ -57,9 +47,9 @@ func (tq TaskQueue) Save(path string) error {
 	return nil
 }
 
-// Insert inserts a new Task into the TaskQueue at the given index. The
-// index must be between 0 and the current length of the TaskQueue
-// (inclusive) or this method will panic.
+// Insert inserts a new Task into the TaskQueue at the given index.
+// The index must be between 0 and the current length of the
+// TaskQueue (inclusive) or this method will panic.
 func (tq TaskQueue) Insert(newTask *Task, index int) TaskQueue {
 	tq.TaskList = append(tq.TaskList, nil)
 	copy(tq.TaskList[index+1:], tq.TaskList[index:])
@@ -107,6 +97,8 @@ func (tq TaskQueue) ValidateNewIndex(index int) error {
 	return nil
 }
 
+// LastOpenedIndex returns the index of last
+// task that is open.
 func (tq TaskQueue) LastOpenedIndex() int {
 	return tq.OpenIndex
 }
@@ -120,61 +112,4 @@ func (tq TaskQueue) HasOpened() bool {
 // Len returns the number of tasks in this TaskQueue.
 func (tq TaskQueue) Len() int {
 	return len(tq.TaskList)
-}
-
-// Normalize normalizes the text of the Task.
-func (t *Task) Normalize() *Task {
-	t.Title = strings.ToUpper(trim(t.Title))
-	t.Story = trim(t.Story)
-	return t
-}
-
-func (t *Task) Edit() error {
-	namePattern := "*_" + strings.ReplaceAll(t.Title, " ", "_")
-	file, err := ioutil.TempFile("", namePattern)
-	if err != nil {
-		return errors.Wrap(err, "failed to open temp file")
-	}
-
-	enc := json.NewEncoder(file)
-	enc.SetIndent("", "  ")
-	err = enc.Encode(t)
-	if err != nil {
-		return errors.Wrap(err, "failed to encode task")
-	}
-	if err = file.Close(); err != nil {
-		return errors.Wrap(err, "failed to close file")
-	}
-
-	shell := strings.TrimSpace(os.Getenv("SHELL"))
-	if len(shell) == 0 {
-		shell = "sh"
-	}
-	editor := strings.TrimSpace(os.Getenv("EDITOR"))
-	if len(editor) == 0 {
-		editor = "vim"
-	}
-	cmd := exec.Command(shell, "-c", fmt.Sprintf("%s %s", editor, file.Name()))
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	if err = cmd.Run(); err != nil {
-		return errors.Wrap(err, "failed to execute editor")
-	}
-
-	file, err = os.Open(file.Name())
-	if err != nil {
-		return errors.Wrap(err, "failed to open file")
-	}
-	dec := json.NewDecoder(file)
-	if err = dec.Decode(t); err != nil {
-		return errors.Wrap(err, "failed to decode file")
-	}
-
-	return nil
-}
-
-// trim transforms any adjacent whitespace into a single
-// space and removes any leading or trailing whitespace.
-func trim(str string) string {
-	return regexp.MustCompile(`\s+`).ReplaceAllString(strings.TrimSpace(str), " ")
 }
