@@ -240,7 +240,7 @@ var clearCmd = &cobra.Command{
 				return nil
 			}
 		}
-		return state.TaskQueue{}.Save(flags.queue)
+		return state.NewQueue().Save(flags.queue)
 	},
 }
 

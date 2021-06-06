@@ -12,11 +12,15 @@ type TaskQueue struct {
 	OpenIndex int
 }
 
+func NewQueue() TaskQueue {
+	return TaskQueue{OpenIndex: -1}
+}
+
 // Load opens the file at the given path and deserializes
 // a TaskQueue from the file's contents. If the file
 // doesn't exist, an empty TaskQueue is returned.
 func Load(path string) (TaskQueue, error) {
-	tq := TaskQueue{OpenIndex: -1}
+	tq := NewQueue()
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
