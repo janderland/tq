@@ -65,7 +65,7 @@ var newCmd = &cobra.Command{
 		if flags.story != "" {
 			flagCount++
 		}
-		if flags.index != -1 {
+		if flags.index > -1 {
 			flagCount++
 		}
 		if flagCount > 0 && flagCount < 3 {
@@ -129,7 +129,7 @@ var openCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		var index int
-		if flags.index != -1 {
+		if flags.index > -1 {
 			index = flags.index
 		} else {
 			start := 0
@@ -163,7 +163,7 @@ var editCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		var index int
-		if flags.index != -1 {
+		if flags.index > -1 {
 			index = flags.index
 		} else {
 			start := 0
