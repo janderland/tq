@@ -1,10 +1,12 @@
 package main
 
 import (
+	"os"
+
 	"github.com/janderland/tq/state"
+	"github.com/janderland/tq/ui"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var flags struct {
@@ -16,7 +18,7 @@ var flags struct {
 }
 
 var tasks state.TaskQueue
-var ui UI
+var ux ui.UI
 
 var rootCmd = &cobra.Command{
 	Use:   "tq",
@@ -27,7 +29,7 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return errors.Wrap(err, "failed to load queue file")
 		}
-		ui = UI{width: flags.width}
+		ux = ui.New(flags.width)
 		return nil
 	},
 }
@@ -38,14 +40,14 @@ var topCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if tasks.Len() == 0 {
-			ui.message("No tasks in queue.")
+			ux.Message("No tasks in queue.")
 			return nil
 		}
 		if !tasks.HasOpened() {
-			ui.message("No tasks are opened.")
+			ux.Message("No tasks are opened.")
 			return nil
 		}
-		ui.display(tasks, 0)
+		ux.Display(tasks, 0)
 		return nil
 	},
 }
@@ -81,22 +83,22 @@ var newCmd = &cobra.Command{
 			newTask.Story = flags.story
 			index = flags.index
 		} else {
-			ui.message("Input the title.")
-			newTask.Title, err = ui.queryLine()
+			ux.Message("Input the title.")
+			newTask.Title, err = ux.QueryLine()
 			if err != nil {
 				return errors.Wrap(err, "failed to read title")
 			}
 
-			ui.message("Input the story.")
-			newTask.Story, err = ui.queryLine()
+			ux.Message("Input the story.")
+			newTask.Story, err = ux.QueryLine()
 			if err != nil {
 				return errors.Wrap(err, "failed to read story")
 			}
 
 			for index = tasks.Len(); index > tasks.LastOpenedIndex()+1; index-- {
-				ui.message("Should the new task be opened before this one?")
-				ui.display(tasks, index-1)
-				yes, err := ui.queryYesNo()
+				ux.Message("Should the new task be opened before this one?")
+				ux.Display(tasks, index-1)
+				yes, err := ux.QueryYesNo()
 				if err != nil {
 					return err
 				}
@@ -106,7 +108,7 @@ var newCmd = &cobra.Command{
 			}
 		}
 
-		ui.message("Inserting new task at index %d.", index)
+		ux.Message("Inserting new task at index %d.", index)
 		return tasks.Insert(newTask.Normalize(), index).Save(flags.queue)
 	},
 }
@@ -117,13 +119,13 @@ var listCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if tasks.Len() == 0 {
-			ui.message("No tasks in queue.")
+			ux.Message("No tasks in queue.")
 			return nil
 		}
 		for index := 0; index < tasks.Len(); index++ {
-			ui.display(tasks, index)
+			ux.Display(tasks, index)
 			if index == tasks.LastOpenedIndex() {
-				ui.line()
+				ux.Line()
 			}
 		}
 		return nil
@@ -144,9 +146,9 @@ var openCmd = &cobra.Command{
 				start = 1
 			}
 			for index = start; index < tasks.Len(); index++ {
-				ui.message("Would you like to open this task?")
-				ui.display(tasks, index)
-				yes, err := ui.queryYesNo()
+				ux.Message("Would you like to open this task?")
+				ux.Display(tasks, index)
+				yes, err := ux.QueryYesNo()
 				if err != nil {
 					return err
 				}
@@ -155,19 +157,19 @@ var openCmd = &cobra.Command{
 				}
 			}
 			if index == tasks.Len() {
-				ui.message("End of queue. No task opened.")
+				ux.Message("End of queue. No task opened.")
 				return nil
 			}
 		}
-		ui.message("Opening task.")
+		ux.Message("Opening task.")
 		return tasks.Front(index).Save(flags.queue)
 	},
 }
 
 var editCmd = &cobra.Command{
-	Use: "edit",
+	Use:   "edit",
 	Short: "Edit a task.",
-	Args: cobra.NoArgs,
+	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		var index int
 		if flags.index != -1 {
@@ -178,9 +180,9 @@ var editCmd = &cobra.Command{
 				start = 1
 			}
 			for index = start; index < tasks.Len(); index++ {
-				ui.message("Would you like to edit this task?")
-				ui.display(tasks, index)
-				yes, err := ui.queryYesNo()
+				ux.Message("Would you like to edit this task?")
+				ux.Display(tasks, index)
+				yes, err := ux.QueryYesNo()
 				if err != nil {
 					return err
 				}
@@ -189,11 +191,11 @@ var editCmd = &cobra.Command{
 				}
 			}
 			if index == tasks.Len() {
-				ui.message("End of queue. No task edited.")
+				ux.Message("End of queue. No task edited.")
 				return nil
 			}
 		}
-		ui.message("Editing task.")
+		ux.Message("Editing task.")
 		if err := tasks.At(index).Edit(); err != nil {
 			return err
 		}
@@ -207,20 +209,20 @@ var doneCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if tasks.Len() == 0 {
-			ui.message("No tasks in queue.")
+			ux.Message("No tasks in queue.")
 			return nil
 		}
-		ui.message("Is this task done?")
-		ui.display(tasks, 0)
-		yes, err := ui.queryYesNo()
+		ux.Message("Is this task done?")
+		ux.Display(tasks, 0)
+		yes, err := ux.QueryYesNo()
 		if err != nil {
 			return err
 		}
 		if !yes {
-			ui.message("Keeping current task.")
+			ux.Message("Keeping current task.")
 			return nil
 		}
-		ui.message("Removing current task.")
+		ux.Message("Removing current task.")
 		return tasks.Pop().Save(flags.queue)
 	},
 }

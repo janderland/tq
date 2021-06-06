@@ -1,4 +1,4 @@
-package main
+package ui
 
 import (
 	"bufio"
@@ -9,12 +9,16 @@ import (
 	"strings"
 )
 
-// Provides a uniform set of UI functions. Ensures
+// UI provides a uniform set of IO functions. Ensures
 // there is an empty line between every statement.
 type UI struct {
 	rd    *bufio.Reader
 	nl    bool
 	width int
+}
+
+func New(width int) UI {
+	return UI{width: width}
 }
 
 func (u *UI) reader() *bufio.Reader {
@@ -58,7 +62,7 @@ func (u *UI) paragraph(str string, indent int) string {
 	return str
 }
 
-func (u *UI) queryYesNo() (bool, error) {
+func (u *UI) QueryYesNo() (bool, error) {
 	u.newline()
 	for {
 		fmt.Print("Enter y|n: ")
@@ -75,17 +79,17 @@ func (u *UI) queryYesNo() (bool, error) {
 	}
 }
 
-func (u *UI) queryLine() (string, error) {
+func (u *UI) QueryLine() (string, error) {
 	u.newline()
 	return u.reader().ReadString('\n')
 }
 
-func (u *UI) message(format string, args ...interface{}) {
+func (u *UI) Message(format string, args ...interface{}) {
 	u.newline()
 	fmt.Println(u.paragraph(fmt.Sprintf("+ "+format, args...), 2))
 }
 
-func (u *UI) display(tasks state.TaskQueue, index int) {
+func (u *UI) Display(tasks state.TaskQueue, index int) {
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
 		title += " "
@@ -102,7 +106,15 @@ func (u *UI) display(tasks state.TaskQueue, index int) {
 	fmt.Println(u.paragraph(story, 4))
 }
 
-func (u *UI) line() {
+func (u *UI) Line() {
 	u.newline()
 	fmt.Println("---")
+}
+
+func spaces(count int) string {
+	str := ""
+	for i := 0; i < count; i++ {
+		str += " "
+	}
+	return str
 }
