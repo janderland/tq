@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/janderland/tq/app"
+	"github.com/janderland/tq/internal"
 )
 
 func main() {
-	if err := app.Run(); err != nil {
+	if err := internal.Run(); err != nil {
 		os.Exit(1)
 	}
 }

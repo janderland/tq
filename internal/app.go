@@ -1,4 +1,4 @@
-package app
+package internal
 
 import (
 	"github.com/janderland/tq/state"
