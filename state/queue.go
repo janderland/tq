@@ -40,12 +40,12 @@ func Load(path string) (TaskQueue, error) {
 // Save serializes the TaskQueue and writes it to the
 // file at the given path. If the file exists it's
 // contents is overwritten.
-func (tq TaskQueue) Save(path string) error {
+func (q TaskQueue) Save(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
 		return errors.Wrap(err, "failed to create file")
 	}
-	if err := json.NewEncoder(file).Encode(tq); err != nil {
+	if err := json.NewEncoder(file).Encode(q); err != nil {
 		return errors.Wrap(err, "failed to encode file")
 	}
 	return nil
@@ -54,66 +54,66 @@ func (tq TaskQueue) Save(path string) error {
 // Insert inserts a new Task into the TaskQueue at the given index.
 // The index must be between 0 and the current length of the
 // TaskQueue (inclusive) or this method will panic.
-func (tq TaskQueue) Insert(newTask *Task, index int) TaskQueue {
-	tq.TaskList = append(tq.TaskList, nil)
-	copy(tq.TaskList[index+1:], tq.TaskList[index:])
-	tq.TaskList[index] = newTask
-	if index <= tq.OpenIndex {
-		tq.OpenIndex++
+func (q TaskQueue) Insert(newTask *Task, index int) TaskQueue {
+	q.TaskList = append(q.TaskList, nil)
+	copy(q.TaskList[index+1:], q.TaskList[index:])
+	q.TaskList[index] = newTask
+	if index <= q.OpenIndex {
+		q.OpenIndex++
 	}
-	return tq
+	return q
 }
 
 // Front moves the Task found at the given index to the
 // front of the TaskQueue. This also causes the moved task
 // to enter the "opened" state. The index must be the index
 // of an existing Task or this method will panic.
-func (tq TaskQueue) Front(index int) TaskQueue {
-	openTask := tq.TaskList[index]
-	copy(tq.TaskList[1:], tq.TaskList[:index])
-	tq.TaskList[0] = openTask
-	if index > tq.OpenIndex {
-		tq.OpenIndex++
+func (q TaskQueue) Front(index int) TaskQueue {
+	openTask := q.TaskList[index]
+	copy(q.TaskList[1:], q.TaskList[:index])
+	q.TaskList[0] = openTask
+	if index > q.OpenIndex {
+		q.OpenIndex++
 	}
-	return tq
+	return q
 }
 
 // Pop removes the Task found at the front of the TaskQueue.
-func (tq TaskQueue) Pop() TaskQueue {
-	tq.TaskList = tq.TaskList[1:]
-	if tq.OpenIndex > -1 {
-		tq.OpenIndex--
+func (q TaskQueue) Pop() TaskQueue {
+	q.TaskList = q.TaskList[1:]
+	if q.OpenIndex > -1 {
+		q.OpenIndex--
 	}
-	return tq
+	return q
 }
 
 // At returns a pointer to the Task at the given index.
-func (tq TaskQueue) At(index int) *Task {
-	return tq.TaskList[index]
+func (q TaskQueue) At(index int) *Task {
+	return q.TaskList[index]
 }
 
 // ValidateNewIndex returns an error if the given index shouldn't be used as the index
 // of a new task. New tasks are only supposed to be inserted after the opened tasks.
-func (tq TaskQueue) ValidateNewIndex(index int) error {
-	if index <= tq.OpenIndex || tq.Len() < index {
-		return errors.Errorf("'index' must be in (%v, %v]", tq.OpenIndex, tq.Len())
+func (q TaskQueue) ValidateNewIndex(index int) error {
+	if index <= q.OpenIndex || q.Len() < index {
+		return errors.Errorf("'index' must be in (%v, %v]", q.OpenIndex, q.Len())
 	}
 	return nil
 }
 
 // LastOpenedIndex returns the index of last
 // task that is open.
-func (tq TaskQueue) LastOpenedIndex() int {
-	return tq.OpenIndex
+func (q TaskQueue) LastOpenedIndex() int {
+	return q.OpenIndex
 }
 
 // HasOpened returns true if this TaskQueue
 // has at least one opened task.
-func (tq TaskQueue) HasOpened() bool {
-	return tq.OpenIndex >= 0
+func (q TaskQueue) HasOpened() bool {
+	return q.OpenIndex >= 0
 }
 
 // Len returns the number of tasks in this TaskQueue.
-func (tq TaskQueue) Len() int {
-	return len(tq.TaskList)
+func (q TaskQueue) Len() int {
+	return len(q.TaskList)
 }
