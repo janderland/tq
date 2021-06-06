@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/janderland/tq/state"
 	"github.com/pkg/errors"
 	"os"
 	"strings"
@@ -84,18 +85,18 @@ func (u *UI) message(format string, args ...interface{}) {
 	fmt.Println(u.paragraph(fmt.Sprintf("+ "+format, args...), 2))
 }
 
-func (u *UI) display(tasks TaskQueue, index int) {
+func (u *UI) display(tasks state.TaskQueue, index int) {
 	title := fmt.Sprintf("%d. ", index)
 	if index < 10 {
 		title += " "
 	}
-	if index <= tasks.lastOpenedIndex() {
+	if index <= tasks.LastOpenedIndex() {
 		title += "[open] "
 	} else {
 		title += "[todo] "
 	}
-	title += tasks.at(index).Title
-	story := spaces(4) + tasks.at(index).Story
+	title += tasks.At(index).Title
+	story := spaces(4) + tasks.At(index).Story
 	u.newline()
 	fmt.Println(u.paragraph(title, 4))
 	fmt.Println(u.paragraph(story, 4))
