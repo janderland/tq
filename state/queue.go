@@ -54,10 +54,10 @@ func (q TaskQueue) Save(path string) error {
 // Insert inserts a new Task into the TaskQueue at the given index.
 // The index must be between 0 and the current length of the
 // TaskQueue (inclusive) or this method will panic.
-func (q TaskQueue) Insert(newTask *Task, index int) TaskQueue {
+func (q TaskQueue) Insert(newTask Task, index int) TaskQueue {
 	q.TaskList = append(q.TaskList, nil)
 	copy(q.TaskList[index+1:], q.TaskList[index:])
-	q.TaskList[index] = newTask
+	q.TaskList[index] = &newTask
 	if index <= q.OpenIndex {
 		q.OpenIndex++
 	}

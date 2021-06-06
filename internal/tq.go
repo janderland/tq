@@ -103,7 +103,7 @@ var newCmd = &cobra.Command{
 		}
 
 		ux.Message("Inserting new task at index %d.", index)
-		return tasks.Insert(&newTask, index).Save(flags.queue)
+		return tasks.Insert(newTask, index).Save(flags.queue)
 	},
 }
 
