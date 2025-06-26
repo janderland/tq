@@ -3,7 +3,6 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
@@ -45,7 +44,7 @@ func (t *Task) Normalize() error {
 // to "vim").
 func (t *Task) Edit() error {
 	namePattern := "*_" + strings.ReplaceAll(t.Title, " ", "_")
-	file, err := ioutil.TempFile("", namePattern)
+	file, err := os.CreateTemp("", namePattern)
 	if err != nil {
 		return fmt.Errorf("%w: failed to open temp file", err)
 	}
