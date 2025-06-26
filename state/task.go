@@ -8,8 +8,6 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type Task struct {
@@ -28,10 +26,10 @@ func (t *Task) Normalize() error {
 	title := strings.ToUpper(trim(t.Title))
 	story := trim(t.Story)
 	if title == "" {
-		return errors.New("title is empty")
+		return fmt.Errorf("title is empty")
 	}
 	if story == "" {
-		return errors.New("story is empty")
+		return fmt.Errorf("story is empty")
 	}
 	t.Title = title
 	t.Story = story
@@ -49,17 +47,17 @@ func (t *Task) Edit() error {
 	namePattern := "*_" + strings.ReplaceAll(t.Title, " ", "_")
 	file, err := ioutil.TempFile("", namePattern)
 	if err != nil {
-		return errors.Wrap(err, "failed to open temp file")
+		return fmt.Errorf("%w: failed to open temp file", err)
 	}
 
 	enc := json.NewEncoder(file)
 	enc.SetIndent("", "  ")
 	err = enc.Encode(t)
 	if err != nil {
-		return errors.Wrap(err, "failed to encode task")
+		return fmt.Errorf("%w: failed to encode task", err)
 	}
 	if err = file.Close(); err != nil {
-		return errors.Wrap(err, "failed to close file")
+		return fmt.Errorf("%w: failed to close file", err)
 	}
 
 	shell := strings.TrimSpace(os.Getenv("SHELL"))
@@ -74,16 +72,16 @@ func (t *Task) Edit() error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	if err = cmd.Run(); err != nil {
-		return errors.Wrap(err, "failed to execute editor")
+		return fmt.Errorf("%w: failed to execute editor", err)
 	}
 
 	file, err = os.Open(file.Name())
 	if err != nil {
-		return errors.Wrap(err, "failed to open file")
+		return fmt.Errorf("%w: failed to open file", err)
 	}
 	dec := json.NewDecoder(file)
 	if err = dec.Decode(t); err != nil {
-		return errors.Wrap(err, "failed to decode file")
+		return fmt.Errorf("%w: failed to decode file", err)
 	}
 
 	return nil

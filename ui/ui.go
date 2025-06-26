@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/janderland/tq/state"
-	"github.com/pkg/errors"
 )
 
 // UI provides a uniform set of IO functions. Ensures
@@ -32,7 +31,7 @@ func (u *UI) QueryYesNo() (bool, error) {
 		fmt.Print("Enter y|n: ")
 		resp, err := u.reader().ReadString('\n')
 		if err != nil {
-			return false, errors.Wrap(err, "failed to query user")
+			return false, fmt.Errorf("%w: failed to query user", err)
 		}
 		switch strings.TrimSpace(resp) {
 		case "y":
