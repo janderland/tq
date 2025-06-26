@@ -45,7 +45,7 @@ func (u *UI) QueryYesNo() (bool, error) {
 // Message prints a message to the user.
 func (u *UI) Message(format string, args ...interface{}) {
 	u.newline()
-	fmt.Println(u.paragraph(fmt.Sprintf("+ "+format, args...), 2))
+	fmt.Println(paragraph(fmt.Sprintf("+ "+format, args...), u.width, 2))
 }
 
 // Display prints the task found at the given index in the given TaskQueue.
@@ -61,9 +61,10 @@ func (u *UI) Display(tasks state.TaskQueue, index int) {
 	}
 	title += tasks.At(index).Title
 	story := spaces(4) + tasks.At(index).Story
+
 	u.newline()
-	fmt.Println(u.paragraph(title, 4))
-	fmt.Println(u.paragraph(story, 4))
+	fmt.Println(paragraph(title, u.width, 4))
+	fmt.Println(paragraph(story, u.width, 4))
 }
 
 // Line prints a horizontal separator.
@@ -89,26 +90,29 @@ func (u *UI) newline() {
 }
 
 // Formats a string to be printed to the console. Newlines
-// are added between words where needed to ensure no single
-// line exceeds "u.width" characters. Also, each line
-// (except for the first) is prefixed with "indent" number
-// of spaces.
-func (u *UI) paragraph(str string, indent int) string {
+// are added between words after a line becomes "width" wide.
+// Also, each line (except for the first) is prefixed with
+// "indent" number of spaces.
+func paragraph(str string, width, indent int) string {
 	wordList := strings.Split(str, " ")
 	count := 0
 	str = ""
 	for i, word := range wordList {
 		str += word
 		count += len(word)
-		if i != len(wordList)-1 {
-			if count > u.width {
-				str += "\n" + spaces(indent)
-				count = indent
-			} else {
-				str += " "
-				count++
-			}
+
+		if i == len(wordList)-1 {
+			break
 		}
+
+		if count > width {
+			str += "\n" + spaces(indent)
+			count = indent
+			continue
+		}
+
+		str += " "
+		count++
 	}
 	return str
 }
