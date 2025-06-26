@@ -2,9 +2,8 @@ package state
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
-
-	"github.com/pkg/errors"
 )
 
 type TaskQueue struct {
@@ -29,7 +28,7 @@ func Load(path string) (TaskQueue, error) {
 		return tq, err
 	}
 	if err := json.NewDecoder(file).Decode(&tq); err != nil {
-		return tq, errors.Wrap(err, "failed to decode file")
+		return tq, fmt.Errorf("%w: failed to decode file", err)
 	}
 	for _, task := range tq.TaskList {
 		_ = task.Normalize()
@@ -43,10 +42,10 @@ func Load(path string) (TaskQueue, error) {
 func (q TaskQueue) Save(path string) error {
 	file, err := os.Create(path)
 	if err != nil {
-		return errors.Wrap(err, "failed to create file")
+		return fmt.Errorf("%w: failed to create file", err)
 	}
 	if err := json.NewEncoder(file).Encode(q); err != nil {
-		return errors.Wrap(err, "failed to encode file")
+		return fmt.Errorf("%w: failed to encode file", err)
 	}
 	return nil
 }
@@ -96,7 +95,7 @@ func (q TaskQueue) At(index int) *Task {
 // of a new task. New tasks are only supposed to be inserted after the opened tasks.
 func (q TaskQueue) ValidateNewIndex(index int) error {
 	if index <= q.OpenIndex || q.Len() < index {
-		return errors.Errorf("'index' must be in (%v, %v]", q.OpenIndex, q.Len())
+		return fmt.Errorf("'index' must be in (%v, %v]", q.OpenIndex, q.Len())
 	}
 	return nil
 }

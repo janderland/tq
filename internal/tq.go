@@ -1,9 +1,10 @@
 package internal
 
 import (
+	"fmt"
+
 	"github.com/janderland/tq/state"
 	"github.com/janderland/tq/ui"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +29,7 @@ var rootCmd = &cobra.Command{
 		var err error
 		tasks, err = state.Load(flags.queue)
 		if err != nil {
-			return errors.Wrap(err, "failed to load queue file")
+			return fmt.Errorf("%w: failed to load queue file", err)
 		}
 		ux = ui.New(flags.width)
 		return nil
@@ -69,7 +70,7 @@ var newCmd = &cobra.Command{
 			flagCount++
 		}
 		if flagCount > 0 && flagCount < 3 {
-			return errors.New("flags 'title', 'story', & 'index' must be all set or none")
+			return fmt.Errorf("flags 'title', 'story', & 'index' must be all set or none")
 		}
 
 		newTask := state.Task{Title: "NEW"}
