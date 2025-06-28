@@ -1,7 +1,7 @@
 package state
 
 import (
-	"encoding/json"
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -35,9 +35,10 @@ func (t *Task) Normalize() error {
 	return nil
 }
 
-// Edit encodes the task into a temporary file and open the file in
-// a text editor. If the editor exits with 0 exit code, then the
-// temporary file is decode back into the task. If the editor fails,
+// Edit writes the task to a temporary file and opens the file in
+// a text editor. The format is: first line is the title, remaining
+// lines are the story. If the editor exits with 0 exit code, then the
+// temporary file is parsed back into the task. If the editor fails,
 // the task remains unedited. The editor is run in the shell specified
 // with the environment variable $SHELL (defaulting to "sh"). The
 // editor is specified with the environment variable $EDITOR (defaulting
@@ -49,11 +50,9 @@ func (t *Task) Edit() error {
 		return fmt.Errorf("%w: failed to open temp file", err)
 	}
 
-	enc := json.NewEncoder(file)
-	enc.SetIndent("", "  ")
-	err = enc.Encode(t)
+	_, err = fmt.Fprintf(file, "%s\n%s", t.Title, t.Story)
 	if err != nil {
-		return fmt.Errorf("%w: failed to encode task", err)
+		return fmt.Errorf("%w: failed to write task", err)
 	}
 	if err = file.Close(); err != nil {
 		return fmt.Errorf("%w: failed to close file", err)
@@ -78,9 +77,22 @@ func (t *Task) Edit() error {
 	if err != nil {
 		return fmt.Errorf("%w: failed to open file", err)
 	}
-	dec := json.NewDecoder(file)
-	if err = dec.Decode(t); err != nil {
-		return fmt.Errorf("%w: failed to decode file", err)
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lines := []string{}
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err = scanner.Err(); err != nil {
+		return fmt.Errorf("%w: failed to read file", err)
+	}
+
+	if len(lines) > 0 {
+		t.Title = lines[0]
+		if len(lines) > 1 {
+			t.Story = strings.Join(lines[1:], "\n")
+		}
 	}
 
 	return nil
