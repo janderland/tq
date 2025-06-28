@@ -1,7 +1,8 @@
-package internal
+package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/janderland/tq/state"
 	"github.com/janderland/tq/ui"
@@ -271,6 +272,8 @@ func init() {
 	rootCmd.AddCommand(clearCmd)
 }
 
-func Run() error {
-	return rootCmd.Execute()
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
