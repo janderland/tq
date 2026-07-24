@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/janderland/tq/state"
 	"github.com/janderland/tq/ui"
@@ -12,8 +14,6 @@ import (
 var (
 	flags struct {
 		queue string
-		title string
-		story string
 		index int
 		width int
 		force bool
@@ -58,39 +58,23 @@ var topCmd = &cobra.Command{
 var newCmd = &cobra.Command{
 	Use:   "new",
 	Short: "Add a new task to the queue.",
-	Args:  cobra.NoArgs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		flagCount := 0
-		if flags.title != "" {
-			flagCount++
+	Args:  cobra.MinimumNArgs(1),
+	RunE: func(_ *cobra.Command, args []string) error {
+		newTask := state.Task{
+			Title:   strings.Join(args, " "),
+			Created: time.Now(),
 		}
-		if flags.story != "" {
-			flagCount++
-		}
-		if flags.index > -1 {
-			flagCount++
-		}
-		if flagCount > 0 && flagCount < 3 {
-			return fmt.Errorf("flags 'title', 'story', & 'index' must be all set or none")
+		if err := newTask.Normalize(); err != nil {
+			return err
 		}
 
-		newTask := state.Task{Title: "NEW"}
 		var index int
-
-		if flagCount != 0 {
+		if flags.index > -1 {
 			if err := tasks.ValidateNewIndex(flags.index); err != nil {
 				return err
 			}
-			newTask.Title = flags.title
-			newTask.Story = flags.story
 			index = flags.index
 		} else {
-			if err := newTask.Edit(); err != nil {
-				return err
-			}
-			if err := newTask.Normalize(); err != nil {
-				return err
-			}
 			for index = tasks.Len(); index > tasks.LastOpenedIndex()+1; index-- {
 				ux.Message("Should the new task be opened before this one?")
 				ux.Display(tasks, index-1)
@@ -256,8 +240,6 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(
 		&flags.width, "width", "w", 60, "width of displayed tasks")
 
-	newCmd.Flags().StringVarP(&flags.title, "title", "t", "", "new task's title")
-	newCmd.Flags().StringVarP(&flags.story, "story", "s", "", "new task's story")
 	newCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "new task's index in the queue")
 	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
 	editCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to edit")

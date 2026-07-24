@@ -50,21 +50,21 @@ func (u *UI) Message(format string, args ...interface{}) {
 
 // Display prints the task found at the given index in the given TaskQueue.
 func (u *UI) Display(tasks state.TaskQueue, index int) {
-	title := fmt.Sprintf("%d. ", index)
+	header := fmt.Sprintf("%d. ", index)
 	if index < 10 {
-		title += " "
+		header += " "
 	}
 	if index <= tasks.LastOpenedIndex() {
-		title += "[open] "
+		header += "[" + green("open") + "] "
 	} else {
-		title += "[todo] "
+		header += "[" + yellow("todo") + "] "
 	}
-	title += tasks.At(index).Title
-	story := spaces(4) + tasks.At(index).Story
+	header += tasks.At(index).Created.Format("2006-01-02")
+	title := spaces(4) + bold(tasks.At(index).Title)
 
 	u.newline()
+	fmt.Println(paragraph(header, u.width, 4))
 	fmt.Println(paragraph(title, u.width, 4))
-	fmt.Println(paragraph(story, u.width, 4))
 }
 
 // Line prints a horizontal separator.
@@ -123,4 +123,22 @@ func spaces(count int) string {
 		str += " "
 	}
 	return str
+}
+
+// bold wraps a string in the ANSI escape codes
+// which render it in bold on the terminal.
+func bold(str string) string {
+	return "\033[1m" + str + "\033[0m"
+}
+
+// green wraps a string in the ANSI escape codes
+// which render it in green on the terminal.
+func green(str string) string {
+	return "\033[32m" + str + "\033[0m"
+}
+
+// yellow wraps a string in the ANSI escape codes
+// which render it in yellow on the terminal.
+func yellow(str string) string {
+	return "\033[33m" + str + "\033[0m"
 }
