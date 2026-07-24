@@ -1,18 +1,17 @@
 package ui
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/chzyer/readline"
 	"github.com/janderland/tq/state"
 )
 
 // UI provides a uniform set of IO functions. Ensures
 // there is an empty line between every statement.
 type UI struct {
-	rd    *bufio.Reader
 	nl    bool
 	width int
 }
@@ -21,22 +20,33 @@ func New(width int) UI {
 	return UI{width: width}
 }
 
-// QueryYesNo queries the user for a 'y' or 'n'.
-// If the user enters another character, the prompt
-// is repeated. If the user enters 'y' or 'n',
-// then true or false is returned respectively.
+// QueryYesNo queries the user for a 'y' or 'n'. The response is
+// read as soon as a single character is pressed, without waiting
+// for enter. If the user presses another key, the prompt is
+// repeated. If the user presses 'y' or 'n', then true or false
+// is returned respectively.
 func (u *UI) QueryYesNo() (bool, error) {
 	u.newline()
+	fmt.Print("Enter y|n: ")
+
+	fd := int(os.Stdin.Fd())
+	termState, err := readline.MakeRaw(fd)
+	if err != nil {
+		return false, fmt.Errorf("%w: failed to query user", err)
+	}
+	defer readline.Restore(fd, termState)
+
+	key := make([]byte, 1)
 	for {
-		fmt.Print("Enter y|n: ")
-		resp, err := u.reader().ReadString('\n')
-		if err != nil {
+		if _, err := os.Stdin.Read(key); err != nil {
 			return false, fmt.Errorf("%w: failed to query user", err)
 		}
-		switch strings.TrimSpace(resp) {
-		case "y":
+		switch key[0] {
+		case 'y':
+			fmt.Println("y")
 			return true, nil
-		case "n":
+		case 'n':
+			fmt.Println("n")
 			return false, nil
 		}
 	}
@@ -71,13 +81,6 @@ func (u *UI) Display(tasks state.TaskQueue, index int) {
 func (u *UI) Line() {
 	u.newline()
 	fmt.Println("---")
-}
-
-func (u *UI) reader() *bufio.Reader {
-	if u.rd == nil {
-		u.rd = bufio.NewReader(os.Stdin)
-	}
-	return u.rd
 }
 
 // Prints a newline, if necessary,
