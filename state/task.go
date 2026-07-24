@@ -1,13 +1,13 @@
 package state
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
+
+	"github.com/chzyer/readline"
 )
 
 type Task struct {
@@ -29,62 +29,28 @@ func (t *Task) Normalize() error {
 	return nil
 }
 
-// Edit writes the task's title to a temporary file and opens the file
-// in a text editor. If the editor exits with 0 exit code, then the
-// first line of the temporary file is parsed back into the task's
-// title. If the editor fails, the task remains unedited. The editor
-// is run in the shell specified with the environment variable $SHELL
-// (defaulting to "sh"). The editor is specified with the environment
-// variable $EDITOR (defaulting to "vim").
+// Edit lets the user edit the task's title inline at the terminal
+// prompt, pre-filled with the current title and using vim-style
+// modal keybindings for navigation.
 func (t *Task) Edit() error {
-	namePattern := "*_" + strings.ReplaceAll(t.Title, " ", "_")
-	file, err := os.CreateTemp("", namePattern)
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:  "Task: ",
+		VimMode: true,
+		FuncFilterInputRune: func(r rune) (rune, bool) {
+			return unicode.ToUpper(r), true
+		},
+	})
 	if err != nil {
-		return fmt.Errorf("%w: failed to open temp file", err)
+		return fmt.Errorf("%w: failed to start line editor", err)
 	}
+	defer rl.Close()
 
-	_, err = fmt.Fprint(file, t.Title)
+	title, err := rl.ReadlineWithDefault(t.Title)
 	if err != nil {
-		return fmt.Errorf("%w: failed to write task", err)
-	}
-	if err = file.Close(); err != nil {
-		return fmt.Errorf("%w: failed to close file", err)
+		return fmt.Errorf("%w: failed to read edited title", err)
 	}
 
-	shell := strings.TrimSpace(os.Getenv("SHELL"))
-	if len(shell) == 0 {
-		shell = "sh"
-	}
-	editor := strings.TrimSpace(os.Getenv("EDITOR"))
-	if len(editor) == 0 {
-		editor = "vim"
-	}
-	cmd := exec.Command(shell, "-c", fmt.Sprintf("%s %s", editor, file.Name()))
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	if err = cmd.Run(); err != nil {
-		return fmt.Errorf("%w: failed to execute editor", err)
-	}
-
-	file, err = os.Open(file.Name())
-	if err != nil {
-		return fmt.Errorf("%w: failed to open file", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	lines := []string{}
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	if err = scanner.Err(); err != nil {
-		return fmt.Errorf("%w: failed to read file", err)
-	}
-
-	if len(lines) > 0 {
-		t.Title = lines[0]
-	}
-
+	t.Title = title
 	return nil
 }
 

@@ -43,7 +43,7 @@ func (u *UI) QueryYesNo() (bool, error) {
 }
 
 // Message prints a message to the user.
-func (u *UI) Message(format string, args ...interface{}) {
+func (u *UI) Message(format string, args ...any) {
 	u.newline()
 	fmt.Println(paragraph(fmt.Sprintf("+ "+format, args...), u.width, 2))
 }
@@ -60,7 +60,7 @@ func (u *UI) Display(tasks state.TaskQueue, index int) {
 		header += "[" + yellow("todo") + "] "
 	}
 	header += tasks.At(index).Created.Format("2006-01-02")
-	title := spaces(4) + bold(tasks.At(index).Title)
+	title := strings.Repeat(" ", 4) + bold(tasks.At(index).Title)
 
 	u.newline()
 	fmt.Println(paragraph(header, u.width, 4))
@@ -106,21 +106,13 @@ func paragraph(str string, width, indent int) string {
 		}
 
 		if count > width {
-			str += "\n" + spaces(indent)
+			str += "\n" + strings.Repeat(" ", indent)
 			count = indent
 			continue
 		}
 
 		str += " "
 		count++
-	}
-	return str
-}
-
-func spaces(count int) string {
-	str := ""
-	for i := 0; i < count; i++ {
-		str += " "
 	}
 	return str
 }

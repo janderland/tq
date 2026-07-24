@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/janderland/tq/state"
@@ -26,6 +25,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "tq",
 	Short: "Task Queue",
+	Args:  cobra.NoArgs,
 	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
 		var err error
 		tasks, err = state.Load(flags.queue)
@@ -34,6 +34,9 @@ var rootCmd = &cobra.Command{
 		}
 		ux = ui.New(flags.width)
 		return nil
+	},
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return topCmd.RunE(cmd, args)
 	},
 }
 
@@ -58,11 +61,14 @@ var topCmd = &cobra.Command{
 var newCmd = &cobra.Command{
 	Use:   "new",
 	Short: "Add a new task to the queue.",
-	Args:  cobra.MinimumNArgs(1),
-	RunE: func(_ *cobra.Command, args []string) error {
+	Args:  cobra.NoArgs,
+	RunE: func(_ *cobra.Command, _ []string) error {
 		newTask := state.Task{
-			Title:   strings.Join(args, " "),
 			Created: time.Now(),
+		}
+		ux.Message("New task.\n")
+		if err := newTask.Edit(); err != nil {
+			return err
 		}
 		if err := newTask.Normalize(); err != nil {
 			return err
@@ -155,11 +161,7 @@ var editCmd = &cobra.Command{
 		if flags.index > -1 {
 			index = flags.index
 		} else {
-			start := 0
-			if tasks.HasOpened() {
-				start = 1
-			}
-			for index = start; index < tasks.Len(); index++ {
+			for index = 0; index < tasks.Len(); index++ {
 				ux.Message("Would you like to edit this task?")
 				ux.Display(tasks, index)
 				yes, err := ux.QueryYesNo()
@@ -175,7 +177,7 @@ var editCmd = &cobra.Command{
 				return nil
 			}
 		}
-		ux.Message("Editing task.")
+		ux.Message("Editing task.\n")
 		task := tasks.At(index)
 		if err := task.Edit(); err != nil {
 			return err
