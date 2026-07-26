@@ -77,6 +77,17 @@ func (u *UI) Display(tasks state.TaskQueue, index int) {
 	fmt.Println(paragraph(title, u.width, 4))
 }
 
+// DisplayDone prints the done task found at the given index.
+func (u *UI) DisplayDone(tasks state.TaskQueue, index int) {
+	header := "x.  [" + red("done") + "] "
+	header += tasks.DoneAt(index).Created.Format("2006-01-02")
+	title := strings.Repeat(" ", 4) + bold(tasks.DoneAt(index).Title)
+
+	u.newline()
+	fmt.Println(paragraph(header, u.width, 4))
+	fmt.Println(paragraph(title, u.width, 4))
+}
+
 // Line prints a horizontal separator.
 func (u *UI) Line() {
 	u.newline()
@@ -136,4 +147,10 @@ func green(str string) string {
 // which render it in yellow on the terminal.
 func yellow(str string) string {
 	return "\033[33m" + str + "\033[0m"
+}
+
+// red wraps a string in the ANSI escape codes
+// which render it in red on the terminal.
+func red(str string) string {
+	return "\033[31m" + str + "\033[0m"
 }

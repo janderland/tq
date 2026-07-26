@@ -8,6 +8,7 @@ import (
 
 type TaskQueue struct {
 	TaskList  []*Task
+	DoneList  []*Task
 	OpenIndex int
 }
 
@@ -31,6 +32,9 @@ func Load(path string) (TaskQueue, error) {
 		return tq, fmt.Errorf("%w: failed to decode file", err)
 	}
 	for _, task := range tq.TaskList {
+		_ = task.Normalize()
+	}
+	for _, task := range tq.DoneList {
 		_ = task.Normalize()
 	}
 	return tq, nil
@@ -77,18 +81,38 @@ func (q TaskQueue) Front(index int) TaskQueue {
 	return q
 }
 
-// Pop removes the Task found at the front of the TaskQueue.
-func (q TaskQueue) Pop() TaskQueue {
+// Complete removes the Task found at the front of the
+// TaskQueue and appends it to the done list.
+func (q TaskQueue) Complete() TaskQueue {
+	doneTask := q.TaskList[0]
 	q.TaskList = q.TaskList[1:]
+	q.DoneList = append(q.DoneList, doneTask)
 	if q.OpenIndex > -1 {
 		q.OpenIndex--
 	}
 	return q
 }
 
+// ClearDone removes every task from the done list.
+func (q TaskQueue) ClearDone() TaskQueue {
+	q.DoneList = nil
+	return q
+}
+
 // At returns a pointer to the Task at the given index.
 func (q TaskQueue) At(index int) *Task {
 	return q.TaskList[index]
+}
+
+// DoneAt returns a pointer to the Task at the given
+// index in the done list.
+func (q TaskQueue) DoneAt(index int) *Task {
+	return q.DoneList[index]
+}
+
+// DoneLen returns the number of tasks in the done list.
+func (q TaskQueue) DoneLen() int {
+	return len(q.DoneList)
 }
 
 // ValidateNewIndex returns an error if the given index shouldn't be used as the index

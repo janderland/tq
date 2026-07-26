@@ -16,6 +16,7 @@ var (
 		index int
 		width int
 		force bool
+		all   bool
 	}
 
 	tasks state.TaskQueue
@@ -104,7 +105,7 @@ var listCmd = &cobra.Command{
 	Short: "List all tasks in the queue.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if tasks.Len() == 0 {
+		if tasks.Len() == 0 && tasks.DoneLen() == 0 {
 			ux.Message("No tasks in queue.")
 			return nil
 		}
@@ -112,6 +113,12 @@ var listCmd = &cobra.Command{
 			ux.Display(tasks, index)
 			if index == tasks.LastOpenedIndex() {
 				ux.Line()
+			}
+		}
+		if tasks.DoneLen() > 0 {
+			ux.Line()
+			for index := 0; index < tasks.DoneLen(); index++ {
+				ux.DisplayDone(tasks, index)
 			}
 		}
 		return nil
@@ -191,7 +198,7 @@ var editCmd = &cobra.Command{
 
 var doneCmd = &cobra.Command{
 	Use:   "done",
-	Short: "Remove the current task from the queue.",
+	Short: "Mark the current task as done.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if tasks.Len() == 0 {
@@ -208,18 +215,32 @@ var doneCmd = &cobra.Command{
 			ux.Message("Keeping current task.")
 			return nil
 		}
-		ux.Message("Removing current task.")
-		return tasks.Pop().Save(flags.queue)
+		ux.Message("Marking current task as done.")
+		return tasks.Complete().Save(flags.queue)
 	},
 }
 
 var clearCmd = &cobra.Command{
 	Use:   "clear",
-	Short: "Clear all tasks from the queue.",
+	Short: "Clear done tasks from the queue.",
 	Args:  cobra.NoArgs,
 	RunE: func(_ *cobra.Command, _ []string) error {
+		if flags.all {
+			if !flags.force {
+				ux.Message("Are you sure you want to clear all tasks?")
+				yes, err := ux.QueryYesNo()
+				if err != nil {
+					return err
+				}
+				if !yes {
+					return nil
+				}
+			}
+			return state.NewQueue().Save(flags.queue)
+		}
+
 		if !flags.force {
-			ux.Message("Are you sure you want to clear all tasks?")
+			ux.Message("Are you sure you want to clear the done tasks?")
 			yes, err := ux.QueryYesNo()
 			if err != nil {
 				return err
@@ -228,7 +249,7 @@ var clearCmd = &cobra.Command{
 				return nil
 			}
 		}
-		return state.NewQueue().Save(flags.queue)
+		return tasks.ClearDone().Save(flags.queue)
 	},
 }
 
@@ -246,6 +267,7 @@ func init() {
 	openCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to open")
 	editCmd.Flags().IntVarP(&flags.index, "index", "i", -1, "index of task to edit")
 	clearCmd.Flags().BoolVarP(&flags.force, "force", "f", false, "clear without confirmation")
+	clearCmd.Flags().BoolVar(&flags.all, "all", false, "clear all tasks, not just done tasks")
 
 	rootCmd.AddCommand(topCmd)
 	rootCmd.AddCommand(newCmd)
