@@ -54,7 +54,9 @@ var topCmd = &cobra.Command{
 			ux.Message("No tasks are opened.")
 			return nil
 		}
-		ux.Display(tasks, 0)
+		for index := 0; index <= tasks.LastOpenedIndex(); index++ {
+			ux.Display(tasks, index)
+		}
 		return nil
 	},
 }
