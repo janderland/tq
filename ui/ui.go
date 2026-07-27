@@ -48,6 +48,9 @@ func (u *UI) QueryYesNo() (bool, error) {
 		case 'n':
 			fmt.Println("n")
 			return false, nil
+		case 3: // Ctrl+C
+			fmt.Println()
+			os.Exit(130)
 		}
 	}
 }
