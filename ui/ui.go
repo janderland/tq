@@ -3,7 +3,10 @@ package ui
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"unicode"
 
 	"github.com/chzyer/readline"
 	"github.com/janderland/tq/state"
@@ -24,7 +27,9 @@ func New(width int) UI {
 // read as soon as a single character is pressed, without waiting
 // for enter. If the user presses another key, the prompt is
 // repeated. If the user presses 'y' or 'n', then true or false
-// is returned respectively.
+// is returned respectively. If the user presses Ctrl-C, or the
+// process is asked to terminate while waiting on input, an error
+// is returned and the terminal's state is always restored first.
 func (u *UI) QueryYesNo() (bool, error) {
 	u.newline()
 	fmt.Print("Enter y|n: ")
@@ -35,6 +40,28 @@ func (u *UI) QueryYesNo() (bool, error) {
 		return false, fmt.Errorf("%w: failed to query user", err)
 	}
 	defer readline.Restore(fd, termState)
+
+	// Raw mode disables the terminal's own Ctrl-C handling, so a
+	// keyboard interrupt never reaches us as a signal here - it's
+	// caught as a plain byte below instead. This handler is for
+	// termination requests that arrive some other way (e.g. `kill`,
+	// or the terminal closing), which would otherwise skip the
+	// deferred restore above and leave the terminal in raw mode.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	done := make(chan struct{})
+	defer func() {
+		signal.Stop(sigCh)
+		close(done)
+	}()
+	go func() {
+		select {
+		case <-sigCh:
+			readline.Restore(fd, termState)
+			os.Exit(1)
+		case <-done:
+		}
+	}()
 
 	key := make([]byte, 1)
 	for {
@@ -48,8 +75,37 @@ func (u *UI) QueryYesNo() (bool, error) {
 		case 'n':
 			fmt.Println("n")
 			return false, nil
+		case readline.CharInterrupt:
+			fmt.Println()
+			return false, fmt.Errorf("cancelled by user")
 		}
 	}
+}
+
+// Edit lets the user edit the given task's title inline at the
+// terminal prompt, pre-filled with the current title and using
+// vim-style modal keybindings for navigation. The task is
+// edited in-place.
+func (u *UI) Edit(task *state.Task) error {
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:  "Task: ",
+		VimMode: true,
+		FuncFilterInputRune: func(r rune) (rune, bool) {
+			return unicode.ToUpper(r), true
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("%w: failed to start line editor", err)
+	}
+	defer rl.Close()
+
+	title, err := rl.ReadlineWithDefault(task.Title)
+	if err != nil {
+		return fmt.Errorf("%w: failed to read edited title", err)
+	}
+
+	task.Title = title
+	return nil
 }
 
 // Message prints a message to the user.

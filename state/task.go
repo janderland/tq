@@ -5,9 +5,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"unicode"
-
-	"github.com/chzyer/readline"
 )
 
 type Task struct {
@@ -25,31 +22,6 @@ func (t *Task) Normalize() error {
 	if title == "" {
 		return fmt.Errorf("title is empty")
 	}
-	t.Title = title
-	return nil
-}
-
-// Edit lets the user edit the task's title inline at the terminal
-// prompt, pre-filled with the current title and using vim-style
-// modal keybindings for navigation.
-func (t *Task) Edit() error {
-	rl, err := readline.NewEx(&readline.Config{
-		Prompt:  "Task: ",
-		VimMode: true,
-		FuncFilterInputRune: func(r rune) (rune, bool) {
-			return unicode.ToUpper(r), true
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("%w: failed to start line editor", err)
-	}
-	defer rl.Close()
-
-	title, err := rl.ReadlineWithDefault(t.Title)
-	if err != nil {
-		return fmt.Errorf("%w: failed to read edited title", err)
-	}
-
 	t.Title = title
 	return nil
 }

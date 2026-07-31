@@ -70,7 +70,7 @@ var newCmd = &cobra.Command{
 			Created: time.Now(),
 		}
 		ux.Message("New task.\n")
-		if err := newTask.Edit(); err != nil {
+		if err := ux.Edit(&newTask); err != nil {
 			return err
 		}
 		if err := newTask.Normalize(); err != nil {
@@ -188,7 +188,7 @@ var editCmd = &cobra.Command{
 		}
 		ux.Message("Editing task.\n")
 		task := tasks.At(index)
-		if err := task.Edit(); err != nil {
+		if err := ux.Edit(task); err != nil {
 			return err
 		}
 		if err := task.Normalize(); err != nil {
